@@ -90,6 +90,15 @@ function NotesList({
                   )}
                   {title(note)}
                 </div>
+                {(note.tags?.length ?? 0) > 0 && (
+                  <div className="note-tags-row">
+                    {note.tags!.map((t, i) => (
+                      <span key={`${t}-${i}`} className="tag-chip tiny">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="note-meta">
                   {note.pinned ? '📌 Pinned · ' : ''}
                   {/* {formatCreated(note.createdAt)} */}

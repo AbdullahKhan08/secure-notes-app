@@ -49,7 +49,7 @@ body {
   flex-shrink: 0;
   width: 40%;
   min-width: 300px;
-  max-width: 450px;
+  max-width: 460px;
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 16px;
@@ -193,7 +193,7 @@ textarea:focus-visible,
 
 textarea {
   width: 100%;
-  height: 70vh;
+  height: 60vh;
   padding: 16px 14px;
   font-size: 16px;
   line-height: 1.5;
@@ -672,4 +672,110 @@ input[type='password'] {
 }
 .toast.error {
   border-left-color: #ef4444;
+}
+
+/* Tag chips (shared) */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tag-chip.on {
+  background: #fffdf0;
+  border-color: var(--accent);
+  color: #7a5d00;
+  font-weight: 600;
+}
+.tag-chip .tag-x {
+  border: none;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tag-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 8px 10px;
+  margin: 2px 0 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tag-input {
+  min-width: 120px;
+  max-width: 240px;
+  border: 1px dashed var(--border);
+  background: #fff;
+  padding: 6px 8px;
+  border-radius: 10px;
+  outline: none;
+  font-size: 12px;
+}
+.tag-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.18);
+}
+
+/* Sidebar tag filter row */
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 8px;
+}
+.btn.small {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.note-tags-row {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-chip.tiny {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+.viewer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.viewer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.viewer-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 8px 10px;
+  margin: 2px 0 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tag-chip.tiny {
+  font-size: 13px;
+  padding: 2px 6px;
 }

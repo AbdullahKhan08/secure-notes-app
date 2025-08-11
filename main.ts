@@ -119,6 +119,16 @@ function maskIfLocked(n: Note) {
   return { ...safe, content: n.locked ? 'Locked Note' : n.content } as Note
 }
 
+const cleanTags = (arr: string[] | undefined) =>
+  Array.from(
+    new Set(
+      (arr ?? [])
+        .flatMap((t) => t.split(',')) // let users paste "a, b, c"
+        .map((t) => t.trim())
+        .filter(Boolean)
+    )
+  )
+
 ipcMain.handle(
   'save-note',
   async (
@@ -127,7 +137,8 @@ ipcMain.handle(
     content: string,
     password: string | null,
     shouldLock: boolean,
-    _preview: string
+    _preview: string,
+    tags: string[]
   ): Promise<
     { success: true; note: Note } | { success: false; error: string }
   > => {
@@ -140,6 +151,7 @@ ipcMain.handle(
       const now = Date.now()
       const id = noteId ?? Date.now()
       const preview = makePreview(content)
+      const tagList = cleanTags(tags)
 
       const idx = notes.findIndex((n) => n.noteId === id)
       let note: Note
@@ -163,6 +175,7 @@ ipcMain.handle(
           preview,
           locked: shouldLock,
           updatedAt: now,
+          tags: tagList,
         }
       } else {
         note = {
@@ -173,6 +186,7 @@ ipcMain.handle(
           createdAt: now,
           updatedAt: now,
           pinned: false,
+          tags: tagList,
         }
       }
 
@@ -219,7 +233,8 @@ ipcMain.handle('get-notes', async (): Promise<Note[]> => {
       return []
     }
 
-    return notes.map(maskIfLocked)
+    // return notes.map(maskIfLocked)
+    return notes.map((n) => maskIfLocked({ ...n, tags: n.tags ?? [] }))
   } catch (e) {
     console.error(e)
     return []
@@ -269,7 +284,8 @@ ipcMain.handle(
     content: string,
     password: string | null,
     shouldLock: boolean,
-    _preview: string
+    _preview: string,
+    tags: string[]
   ): Promise<
     { success: true; note: Note } | { success: false; error: string }
   > => {
@@ -282,8 +298,10 @@ ipcMain.handle(
       const note = notes[noteIndex]
       const now = Date.now()
       const preview = makePreview(content)
+      const tagList = cleanTags(tags)
       note.preview = preview
       note.updatedAt = now
+      note.tags = tagList
 
       if (shouldLock) {
         const wasLocked = note.locked === true

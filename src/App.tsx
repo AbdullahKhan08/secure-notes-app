@@ -21,6 +21,17 @@ function App() {
   const [sessionUnlocked, setSessionUnlocked] = useState<Set<number>>(new Set())
   const [toasts, setToasts] = useState<Toast[]>([])
   const [query, setQuery] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  const allTags = React.useMemo(
+    () => Array.from(new Set(notes.flatMap((n) => n.tags ?? []))).sort(),
+    [notes]
+  )
+
+  const toggleFilterTag = (t: string) =>
+    setSelectedTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    )
 
   const pushToast = (text: string, kind: ToastKind = 'info') => {
     const id = Date.now() + Math.random()
@@ -37,15 +48,30 @@ function App() {
 
   const filtered = sortNotes(
     notes.filter((n) => {
-      const q = query.trim().toLowerCase()
-      if (!q) return true
-      // search preview always; search content only if not locked
-      const inPreview = (n.preview || '').toLowerCase().includes(q)
-      // const inContent = !n.locked && (n.content || '').toLowerCase().includes(q)
+      // tokenize query: OR across tokens
+      const raw = query.trim().toLowerCase()
+      const tokens = raw ? raw.split(/[\s,\/]+/).filter(Boolean) : []
+
+      // search content only if not masked
       const contentForSearch =
         n.content && n.content !== 'Locked Note' ? n.content : ''
-      const inContent = contentForSearch.toLowerCase().includes(q)
-      return inPreview || inContent
+
+      const textMatch =
+        tokens.length === 0 ||
+        tokens.some((q) => {
+          const inPreview = (n.preview || '').toLowerCase().includes(q)
+          const inContent = contentForSearch.toLowerCase().includes(q)
+          const inTags = (n.tags || []).some((t) => t.toLowerCase().includes(q))
+          return inPreview || inContent || inTags
+        })
+
+      const tags = n.tags ?? []
+      // const tagMatch =
+      //   selectedTags.length === 0 || selectedTags.every((t) => tags.includes(t)) // AND filter on chips
+      const tagMatch =
+        selectedTags.length === 0 || selectedTags.some((t) => tags.includes(t)) // OR
+
+      return textMatch && tagMatch
     })
   )
 
@@ -128,7 +154,8 @@ function App() {
     noteId: number | null,
     content: string,
     password: string,
-    shouldLock: boolean
+    shouldLock: boolean,
+    tags: string[]
   ) => {
     try {
       const originallyLocked =
@@ -156,7 +183,8 @@ function App() {
           content,
           password,
           shouldLock,
-          preview
+          preview,
+          tags
         )
       } else {
         result = await window.electronAPI.saveNote(
@@ -164,7 +192,8 @@ function App() {
           content,
           password,
           shouldLock,
-          preview
+          preview,
+          tags
         )
       }
 
@@ -311,7 +340,32 @@ function App() {
               </div>
             )}
           </div>
-
+          {allTags.length > 0 && (
+            <div className="tag-filter" aria-label="Filter by tag">
+              {allTags.map((t) => {
+                const on = selectedTags.includes(t)
+                return (
+                  <button
+                    key={t}
+                    className={`tag-chip ${on ? 'on' : ''}`}
+                    aria-pressed={on}
+                    onClick={() => toggleFilterTag(t)}
+                    title={on ? `Remove filter: ${t}` : `Filter by: ${t}`}
+                  >
+                    #{t}
+                  </button>
+                )
+              })}
+              {selectedTags.length > 0 && (
+                <button
+                  className="btn ghost small"
+                  onClick={() => setSelectedTags([])}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
           <NoteList
             notes={filtered}
             selectedId={selectedNote?.noteId ?? null}

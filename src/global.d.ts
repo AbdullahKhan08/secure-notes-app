@@ -8,7 +8,8 @@ declare global {
         content: string,
         password: string | null,
         shouldLock: boolean,
-        preview: string
+        preview: string,
+        tags: string[]
       ) => Promise<
         { success: true; note: Note } | { success: false; error: string }
       >
@@ -27,7 +28,8 @@ declare global {
         content: string,
         password: string | null,
         shouldLock: boolean,
-        preview: string
+        preview: string,
+        tags: string[]
       ) => Promise<
         { success: true; note: Note } | { success: false; error: string }
       >

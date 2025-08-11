@@ -14,7 +14,8 @@ interface NoteEditorProps {
     noteId: number | null,
     content: string,
     password: string,
-    shouldLock: boolean
+    shouldLock: boolean,
+    tags: string[]
   ) => void
   notify: (text: string, kind?: 'info' | 'success' | 'error') => void // ← NEW
 }
@@ -35,6 +36,32 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const [pendingLockPassword, setPendingLockPassword] = useState('')
   const [completeSaveAfterPassword, setCompleteSaveAfterPassword] =
     useState(false)
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+
+  const addTag = (raw: string) => {
+    const t = raw.trim().replace(/^#/, '')
+    if (!t) return
+    setTags((prev) => (prev.includes(t) ? prev : [...prev, t]))
+  }
+
+  const removeTag = (idx: number) =>
+    setTags((prev) => prev.filter((_, i) => i !== idx))
+
+  useEffect(() => {
+    setTags(note?.tags ?? [])
+  }, [note?.noteId, note?.tags, isEditing])
+
+  const onTagKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+      e.preventDefault()
+      addTag(tagInput.replace(',', ''))
+      setTagInput('')
+    } else if (e.key === 'Backspace' && !tagInput) {
+      // quick backspace to remove last tag
+      setTags((prev) => prev.slice(0, -1))
+    }
+  }
 
   useEffect(() => {
     if (isEditing) {
@@ -131,7 +158,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         passwordToSend = ''
       }
     }
-    onSave(note?.noteId ?? null, trimmed, passwordToSend, lockOnSave)
+    onSave(note?.noteId ?? null, trimmed, passwordToSend, lockOnSave, tags)
     if (!note?.noteId) setContent('')
     setIsChangingPassword(false)
     setPendingLockPassword('')
@@ -145,6 +172,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     note?.noteId,
     onSave,
     notify,
+    tags,
   ])
 
   const handlePasswordSubmit = useCallback(
@@ -160,14 +188,14 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       setPasswordModalOpen(false)
 
       if (completeSaveAfterPassword) {
-        onSave(note?.noteId ?? null, content.trim(), trimmedPw, true)
+        onSave(note?.noteId ?? null, content.trim(), trimmedPw, true, tags)
         if (!note?.noteId) setContent('')
         setIsChangingPassword(false)
         setPendingLockPassword('')
         setCompleteSaveAfterPassword(false)
       }
     },
-    [completeSaveAfterPassword, content, note?.noteId, onSave, notify]
+    [completeSaveAfterPassword, content, note?.noteId, onSave, notify, tags]
   )
 
   // ⌘/Ctrl + S to save
@@ -254,6 +282,28 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
               {relTime(note.updatedAt ?? note.createdAt ?? note.noteId)}
             </div>
           )}
+          <div className="tag-editor" aria-label="Tags">
+            {tags.map((t, i) => (
+              <span key={`${t}-${i}`} className="tag-chip on">
+                #{t}
+                <button
+                  className="tag-x"
+                  aria-label={`Remove ${t}`}
+                  onClick={() => removeTag(i)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <input
+              className="tag-input"
+              placeholder={tags.length ? 'Add tag…' : 'Add tags…'}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={onTagKeyDown}
+              aria-label="Add tag"
+            />
+          </div>
 
           <textarea
             value={content}
@@ -264,38 +314,52 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       ) : (
         <>
           {note && (
-            <div
-              className="viewer-header"
-              title={`Created ${fullDate(
-                note.createdAt ?? note.noteId
-              )} • Last edited ${fullDate(
-                note.updatedAt ?? note.createdAt ?? note.noteId
-              )}`}
-            >
-              <div className="viewer-meta">
-                Created {fullDate(note.createdAt ?? note.noteId)} · Last edited{' '}
-                {relTime(note.updatedAt ?? note.createdAt ?? note.noteId)}
-              </div>
-              <div className="viewer-right">
-                {note.locked && (
-                  <>
-                    <span
-                      className={`status-chip ${
-                        isLocked ? 'locked' : 'unlocked'
-                      }`}
-                    >
-                      {isLocked ? 'Locked' : 'Unlocked (this session)'}
-                    </span>
-                    {isLocked && (
-                      <span className="viewer-hint">
-                        {' '}
-                        🔒 Locked — unlock to view
+            <>
+              <div
+                className="viewer-header"
+                title={`Created ${fullDate(
+                  note.createdAt ?? note.noteId
+                )} • Last edited ${fullDate(
+                  note.updatedAt ?? note.createdAt ?? note.noteId
+                )}`}
+              >
+                <div className="viewer-left">
+                  <div className="viewer-meta">
+                    Created {fullDate(note.createdAt ?? note.noteId)} · Last
+                    edited{' '}
+                    {relTime(note.updatedAt ?? note.createdAt ?? note.noteId)}
+                  </div>
+                </div>
+                <div className="viewer-right">
+                  {note.locked && (
+                    <>
+                      <span
+                        className={`status-chip ${
+                          isLocked ? 'locked' : 'unlocked'
+                        }`}
+                      >
+                        {isLocked ? 'Locked' : 'Unlocked (this session)'}
                       </span>
-                    )}
-                  </>
-                )}
+                      {isLocked && (
+                        <span className="viewer-hint">
+                          {' '}
+                          🔒 Locked — unlock to view
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+              {(note.tags?.length ?? 0) > 0 && (
+                <div className="viewer-tags-row">
+                  {note.tags!.map((t, i) => (
+                    <span key={`${t}-${i}`} className="tag-chip tiny">
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           <div className="note-content-view">
             <div

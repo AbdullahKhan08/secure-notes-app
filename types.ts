@@ -9,4 +9,5 @@ export interface Note {
   createdAt: number
   updatedAt: number
   pinned?: boolean
+  tags: string[]
 }

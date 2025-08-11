@@ -18,7 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     content: string,
     password: string | null,
     shouldLock: boolean,
-    preview: string
+    preview: string,
+    tags: string[]
   ): Promise<SaveResult> =>
     ipcRenderer.invoke(
       'save-note',
@@ -26,7 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       content,
       password,
       shouldLock,
-      preview
+      preview,
+      tags
     ),
 
   getNotes: (): Promise<Note[]> => ipcRenderer.invoke('get-notes'),
@@ -39,7 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     content: string,
     password: string | null,
     shouldLock: boolean,
-    preview: string
+    preview: string,
+    tags: string[]
   ): Promise<EditResult> =>
     ipcRenderer.invoke(
       'edit-note',
@@ -47,7 +50,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       content,
       password,
       shouldLock,
-      preview
+      preview,
+      tags
     ),
 
   deleteNote: (noteId: number): Promise<DeleteResult> =>

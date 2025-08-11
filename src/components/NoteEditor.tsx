@@ -9,12 +9,14 @@ interface NoteEditorProps {
   lockOnSave: boolean
   setLockOnSave: (v: boolean) => void
   originalLocked: boolean
+  unlockedThisSession: boolean
   onSave: (
     noteId: number | null,
     content: string,
     password: string,
     shouldLock: boolean
   ) => void
+  notify: (text: string, kind?: 'info' | 'success' | 'error') => void // ← NEW
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({
@@ -23,7 +25,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   lockOnSave,
   setLockOnSave,
   originalLocked,
+  unlockedThisSession,
   onSave,
+  notify,
 }) => {
   const [content, setContent] = useState<string>('')
   const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false)
@@ -63,6 +67,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   // const openPasswordModal = () => setPasswordModalOpen(true)
   // const closePasswordModal = () => setPasswordModalOpen(false)
 
+  const fullDate = (ms?: number) =>
+    ms
+      ? new Date(ms).toLocaleString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : ''
+
+  const relTime = (ms?: number) => {
+    if (!ms) return ''
+    const now = Date.now()
+    const diff = Math.max(0, Math.floor((now - ms) / 1000))
+    if (diff < 10) return 'just now'
+    if (diff < 60) return `${diff}s ago`
+    const m = Math.floor(diff / 60)
+    if (m < 60) return `${m}m ago`
+    const h = Math.floor(m / 60)
+    if (h < 24) return `${h}h ago`
+    const d = Math.floor(h / 24)
+    if (d === 1) return 'yesterday'
+    return new Date(ms).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
   const handleChangePasswordClick = useCallback(() => {
     setIsChangingPassword(true)
     setCompleteSaveAfterPassword(false)
@@ -72,7 +105,8 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleSaveClick = useCallback(() => {
     const trimmed = content.trim()
     if (!trimmed) {
-      alert('Please enter note content')
+      // alert('Please enter note content')
+      notify('Please enter note content', 'error')
       return
     }
 
@@ -110,13 +144,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     pendingLockPassword,
     note?.noteId,
     onSave,
+    notify,
   ])
 
   const handlePasswordSubmit = useCallback(
     (password: string) => {
       const trimmedPw = password.trim()
       if (!trimmedPw) {
-        alert('Please enter a password')
+        // alert('Please enter a password')
+        notify('Please enter a password', 'error')
         return
       }
       // STAGE the password; do NOT save yet
@@ -131,7 +167,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         setCompleteSaveAfterPassword(false)
       }
     },
-    [completeSaveAfterPassword, content, note?.noteId, onSave]
+    [completeSaveAfterPassword, content, note?.noteId, onSave, notify]
   )
 
   // ⌘/Ctrl + S to save
@@ -179,13 +215,45 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
                 Change password…
               </button>
             )}
-
+            {note?.locked && (
+              <span
+                className={`status-chip ${
+                  unlockedThisSession ? 'unlocked' : 'locked'
+                }`}
+                title={
+                  unlockedThisSession
+                    ? 'Decrypted in this session'
+                    : 'Encrypted on disk'
+                }
+              >
+                {unlockedThisSession ? 'Unlocked (this session)' : 'Locked'}
+              </span>
+            )}
             <div className="spacer" />
 
-            <button className="btn primary" onClick={handleSaveClick}>
+            <button
+              className="btn primary"
+              onClick={handleSaveClick}
+              disabled={!content.trim()}
+              aria-disabled={!content.trim()}
+            >
               {lockOnSave ? 'Lock & Save' : 'Save Note'}
             </button>
           </div>
+
+          {note && (
+            <div
+              className="viewer-meta"
+              title={`Created ${fullDate(
+                note.createdAt ?? note.noteId
+              )} • Last edited ${fullDate(
+                note.updatedAt ?? note.createdAt ?? note.noteId
+              )}`}
+            >
+              Created {fullDate(note.createdAt ?? note.noteId)} · Last edited{' '}
+              {relTime(note.updatedAt ?? note.createdAt ?? note.noteId)}
+            </div>
+          )}
 
           <textarea
             value={content}
@@ -194,26 +262,50 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
           />
         </>
       ) : (
-        <div className="note-content-view">
-          {isLocked ? (
-            <>
-              <div className="view-lock-badge">🔒 Locked — unlock to view</div>
-              <div
-                className="note-content-pre"
-                style={{ color: 'var(--muted)' }}
-              >
-                {note?.content || 'No preview'}
+        <>
+          {note && (
+            <div
+              className="viewer-header"
+              title={`Created ${fullDate(
+                note.createdAt ?? note.noteId
+              )} • Last edited ${fullDate(
+                note.updatedAt ?? note.createdAt ?? note.noteId
+              )}`}
+            >
+              <div className="viewer-meta">
+                Created {fullDate(note.createdAt ?? note.noteId)} · Last edited{' '}
+                {relTime(note.updatedAt ?? note.createdAt ?? note.noteId)}
               </div>
-            </>
-          ) : (
-            <>
-              {note?.locked && (
-                <div className="view-lock-badge">🔓 Unlocked (decrypted)</div>
-              )}
-              <div className="note-content-pre">{content}</div>
-            </>
+              <div className="viewer-right">
+                {note.locked && (
+                  <>
+                    <span
+                      className={`status-chip ${
+                        isLocked ? 'locked' : 'unlocked'
+                      }`}
+                    >
+                      {isLocked ? 'Locked' : 'Unlocked (this session)'}
+                    </span>
+                    {isLocked && (
+                      <span className="viewer-hint">
+                        {' '}
+                        🔒 Locked — unlock to view
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           )}
-        </div>
+          <div className="note-content-view">
+            <div
+              className="note-content-pre"
+              style={isLocked ? { color: 'var(--muted)' } : undefined}
+            >
+              {isLocked ? note?.content || 'No preview' : content}
+            </div>
+          </div>
+        </>
       )}
       <PasswordModal
         isOpen={passwordModalOpen}

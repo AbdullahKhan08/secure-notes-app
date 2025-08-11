@@ -6,4 +6,7 @@ export interface Note {
   iv?: string
   encryptedData?: string
   passwordHash?: string
+  createdAt: number
+  updatedAt: number
+  pinned?: boolean
 }

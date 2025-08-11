@@ -129,7 +129,7 @@ ipcMain.handle(
     shouldLock: boolean,
     _preview: string
   ): Promise<
-    { success: true; noteId: number } | { success: false; error: string }
+    { success: true; note: Note } | { success: false; error: string }
   > => {
     try {
       if (!content || (shouldLock && !password)) {
@@ -137,14 +137,43 @@ ipcMain.handle(
       }
       const file = getNotesFilePath()
       const notes: Note[] = await fs.readJson(file).catch(() => [])
+      const now = Date.now()
       const id = noteId ?? Date.now()
       const preview = makePreview(content)
 
-      const note: Note = {
-        noteId: id,
-        content: shouldLock ? 'Locked Note' : content,
-        preview,
-        locked: shouldLock,
+      const idx = notes.findIndex((n) => n.noteId === id)
+      let note: Note
+
+      // const note: Note = {
+      //   noteId: id,
+      //   content: shouldLock ? 'Locked Note' : content,
+      //   preview,
+      //   locked: shouldLock,
+      //   createdAt: now,
+      //   updatedAt: now,
+      //   pinned: false,
+      // }
+
+      if (idx >= 0) {
+        // (rare) overwrite via save-note: preserve createdAt/pinned
+        const prev = notes[idx]
+        note = {
+          ...prev,
+          content: shouldLock ? 'Locked Note' : content,
+          preview,
+          locked: shouldLock,
+          updatedAt: now,
+        }
+      } else {
+        note = {
+          noteId: id,
+          content: shouldLock ? 'Locked Note' : content,
+          preview,
+          locked: shouldLock,
+          createdAt: now,
+          updatedAt: now,
+          pinned: false,
+        }
       }
 
       if (shouldLock) {
@@ -158,13 +187,18 @@ ipcMain.handle(
         note.iv = iv.toString('hex')
         note.encryptedData = encrypted
         note.passwordHash = hashedPassword
+      } else {
+        // IMPORTANT: ensure no stale crypto fields remain when unlocking via save-note
+        delete note.iv
+        delete note.encryptedData
+        delete note.passwordHash
       }
 
-      const idx = notes.findIndex((n) => n.noteId === id)
       if (idx >= 0) notes[idx] = note
       else notes.push(note)
+
       await fs.writeJson(file, notes, { spaces: 2 })
-      return { success: true, noteId: id }
+      return { success: true, note: maskIfLocked(note) }
     } catch (e: any) {
       console.error(e)
       return { success: false, error: e.message }
@@ -246,12 +280,12 @@ ipcMain.handle(
       if (noteIndex === -1) throw new Error('Note not found')
 
       const note = notes[noteIndex]
+      const now = Date.now()
       const preview = makePreview(content)
       note.preview = preview
-      // note.locked = shouldLock
+      note.updatedAt = now
 
       if (shouldLock) {
-        // const wasLocked = !!note.locked
         const wasLocked = note.locked === true
         let passwordHashToUse: string | null = note.passwordHash ?? null
 
@@ -306,6 +340,33 @@ ipcMain.handle(
       notes = notes.filter((n) => n.noteId !== noteId)
       await fs.writeJson(file, notes)
       return { success: true }
+    } catch (e: any) {
+      console.error(e)
+      return { success: false, error: e.message }
+    }
+  }
+)
+
+ipcMain.handle(
+  'toggle-pin',
+  async (
+    event,
+    noteId: number,
+    pinned: boolean
+  ): Promise<
+    { success: true; note: Note } | { success: false; error: string }
+  > => {
+    try {
+      const file = getNotesFilePath()
+      const notes: Note[] = await fs.readJson(file)
+      const i = notes.findIndex((n) => n.noteId === noteId)
+      if (i === -1) throw new Error('Note not found')
+      const n = notes[i]
+      n.pinned = !!pinned
+      n.updatedAt = Date.now()
+      notes[i] = n
+      await fs.writeJson(file, notes, { spaces: 2 })
+      return { success: true, note: maskIfLocked(n) }
     } catch (e: any) {
       console.error(e)
       return { success: false, error: e.message }

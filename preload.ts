@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { Note } from './types'
 
 type SaveResult =
-  | { success: true; noteId: number }
+  | { success: true; note: Note }
   | { success: false; error: string }
 type UnlockResult =
   | { success: true; note: Note }
@@ -52,4 +52,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   deleteNote: (noteId: number): Promise<DeleteResult> =>
     ipcRenderer.invoke('delete-note', noteId),
+
+  togglePin: (noteId: number, pinned: boolean): Promise<EditResult> =>
+    ipcRenderer.invoke('toggle-pin', noteId, pinned),
 })

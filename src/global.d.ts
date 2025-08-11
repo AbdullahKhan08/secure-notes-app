@@ -10,7 +10,7 @@ declare global {
         shouldLock: boolean,
         preview: string
       ) => Promise<
-        { success: true; noteId: number } | { success: false; error: string }
+        { success: true; note: Note } | { success: false; error: string }
       >
 
       getNotes: () => Promise<Note[]>
@@ -35,6 +35,13 @@ declare global {
       deleteNote: (
         noteId: number
       ) => Promise<{ success: true } | { success: false; error: string }>
+
+      togglePin: (
+        noteId: number,
+        pinned: boolean
+      ) => Promise<
+        { success: true; note: Note } | { success: false; error: string }
+      >
     }
   }
 }

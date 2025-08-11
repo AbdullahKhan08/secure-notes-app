@@ -1,0 +1,42 @@
+import { Note } from '../types'
+
+declare global {
+  interface Window {
+    electronAPI: {
+      saveNote: (
+        noteId: number | null,
+        content: string,
+        password: string | null,
+        shouldLock: boolean,
+        preview: string
+      ) => Promise<
+        { success: true; noteId: number } | { success: false; error: string }
+      >
+
+      getNotes: () => Promise<Note[]>
+
+      unlockNote: (
+        noteId: number,
+        password: string
+      ) => Promise<
+        { success: true; note: Note } | { success: false; error: string }
+      >
+
+      editNote: (
+        noteId: number,
+        content: string,
+        password: string | null,
+        shouldLock: boolean,
+        preview: string
+      ) => Promise<
+        { success: true; note: Note } | { success: false; error: string }
+      >
+
+      deleteNote: (
+        noteId: number
+      ) => Promise<{ success: true } | { success: false; error: string }>
+    }
+  }
+}
+
+export {}

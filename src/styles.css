@@ -1,0 +1,418 @@
+/* =========================
+   Theme (Apple Notes–ish)
+   ========================= */
+:root {
+  --bg: #fffdf6;
+  --panel: #f6f3e7;
+  --border: #e8e2c8;
+  --text: #2b2b2b;
+  --muted: #6b6b6b;
+  --accent: #f4c84a;
+  --accent-hover: #eab308;
+  --note-bg: #fffbea;
+  --note-border: #f3e8a1;
+}
+
+/* =========================
+   Base
+   ========================= */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  min-width: 1000px;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* =========================
+   Sidebar (Notes List)
+   ========================= */
+.notes-list {
+  flex: 0 0 40%; /* fixed 40% column */
+  flex-shrink: 0;
+  width: 40%;
+  min-width: 300px;
+  max-width: 450px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.notes-ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.note-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+}
+.note-row:hover {
+  background: #fffef6;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+}
+.note-row.selected {
+  background: #fffdf0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(244, 200, 74, 0.25);
+}
+
+/* Keyboard focus rings */
+.note-row:focus-visible,
+.btn:focus-visible,
+textarea:focus-visible,
+.modal-content input[type='password']:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.33);
+}
+
+/* Themed scrollbars (WebKit) */
+.notes-list::-webkit-scrollbar,
+.note-editor::-webkit-scrollbar {
+  width: 10px;
+}
+.notes-list::-webkit-scrollbar-track,
+.note-editor::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+.notes-list::-webkit-scrollbar-thumb,
+.note-editor::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid var(--panel);
+}
+.notes-list::-webkit-scrollbar-thumb:hover,
+.note-editor::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border-color: var(--panel);
+}
+
+.note-title {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.lock-badge {
+  opacity: 0.75;
+}
+.row-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.new-note-btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #1f1f1f;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.02s ease;
+}
+
+.new-note-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.new-note-btn:active {
+  transform: translateY(1px);
+}
+/* =========================
+   Editor Pane
+   ========================= */
+
+.note-editor-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.note-editor {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 20px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* container scroll handled below */
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.spacer {
+  flex: 1;
+}
+
+textarea {
+  width: 100%;
+  height: 50vh;
+  padding: 16px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  border: 1px solid var(--note-border);
+  border-radius: 12px;
+  background: var(--note-bg);
+  outline: none;
+  resize: none;
+  overflow: auto;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.25);
+}
+
+.note-content {
+  padding: 20px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 16px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.note-content-view {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  max-height: calc(100vh - 180px); /* adjust if needed */
+  overflow: auto;
+}
+
+.view-lock-badge {
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.note-content-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+input[type='password'] {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+.btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.02s ease;
+}
+.btn:hover {
+  background: #fffef5;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1f1f1f;
+  font-weight: 600;
+}
+.btn.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn.ghost {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn.danger {
+  background: #fff8f8;
+  border-color: #ffd4d4;
+  color: #b42318;
+}
+.btn.danger:hover {
+  background: #ffecec;
+}
+
+/* =========================
+   Modal
+   ========================= */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  width: 420px;
+  max-width: calc(100% - 32px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.modal-content h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.modal-content input[type='password'] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+}
+
+.modal-content input[type='password']:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.25);
+}
+.modal-content .actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.modal-content .actions .btn.primary {
+  min-width: 110px;
+}
+
+/* Lock toggle */
+.lock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lock-toggle .toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lock-toggle .toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.lock-toggle .toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: left 0.2s ease;
+}
+
+.lock-toggle .toggle-input:checked + .toggle-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.lock-toggle .toggle-input:checked + .toggle-track .toggle-thumb {
+  left: 22px;
+}
+
+.lock-toggle .toggle-text {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.lock-toggle:hover .toggle-track {
+  filter: brightness(0.98);
+}
+
+.lock-toggle .toggle-input:focus-visible + .toggle-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

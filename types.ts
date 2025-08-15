@@ -8,6 +8,7 @@ export interface Note {
   passwordHash?: string
   createdAt: number
   updatedAt: number
+  deletedAt?: number
   pinned?: boolean
   tags: string[]
 }

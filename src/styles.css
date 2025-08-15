@@ -89,10 +89,23 @@ body {
 }
 
 /* Keyboard focus rings */
-.note-row:focus-visible,
+/* .note-row:focus-visible,
 .btn:focus-visible,
 textarea:focus-visible,
 .modal-content input[type='password']:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.33);
+} */
+/* Keyboard focus rings */
+.note-row:focus-visible,
+.btn:focus-visible,
+textarea:focus-visible,
+.tab:focus-visible,
+.tag-chip:focus-visible,
+.modal-content input[type='password']:focus-visible,
+.modal-content input[type='text']:focus-visible,
+.modal-content .password-input:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.33);
@@ -117,6 +130,22 @@ textarea:focus-visible,
 .note-editor::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
   border-color: var(--panel);
+}
+
+.note-content-view::-webkit-scrollbar {
+  width: 10px;
+}
+.note-content-view::-webkit-scrollbar-track {
+  background: #fff;
+}
+.note-content-view::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid #fff;
+}
+.note-content-view::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border-color: #fff;
 }
 
 .note-title {
@@ -228,7 +257,7 @@ textarea:focus {
   border-radius: 12px;
   background: #fff;
   padding: 14px;
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - 210px);
   overflow: auto;
 }
 
@@ -244,15 +273,6 @@ textarea:focus {
   overflow-wrap: anywhere;
   line-height: 1.6;
   font-size: 16px;
-}
-
-input[type='password'] {
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  box-sizing: border-box;
 }
 
 /* =========================
@@ -331,7 +351,7 @@ input[type='password'] {
   font-size: 18px;
 }
 
-.modal-content input[type='password'] {
+/* .modal-content input[type='password'] {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -343,7 +363,7 @@ input[type='password'] {
 .modal-content input[type='password']:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.25);
-}
+} */
 .modal-content .actions {
   margin-top: 14px;
   display: flex;
@@ -749,8 +769,9 @@ input[type='password'] {
   gap: 6px;
 }
 .tag-chip.tiny {
-  font-size: 11px;
+  font-size: 13px;
   padding: 2px 6px;
+  border-radius: 999px;
 }
 .viewer-left {
   display: flex;
@@ -769,13 +790,117 @@ input[type='password'] {
   flex-wrap: wrap;
   gap: 6px 8px;
   padding: 8px 10px;
-  margin: 2px 0 8px;
+  margin: 6px 0 8px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
 
-.tag-chip.tiny {
+.tabs {
+  margin-left: 16px;
+  display: inline-flex;
+  gap: 6px;
+}
+.tab {
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 999px;
   font-size: 13px;
-  padding: 2px 6px;
+  cursor: pointer;
+}
+.tab.active {
+  border-color: var(--accent);
+  background: #fffdf0;
+  font-weight: 600;
+}
+
+.tab:active {
+  transform: translateY(1px);
+}
+
+.notes-list-container > p {
+  margin: 8px 4px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tab:hover {
+  background: #fffef5;
+}
+
+.tag-chip:hover {
+  background: #fffef5;
+}
+
+.toast-text {
+  margin-right: 8px;
+}
+.toast-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* -------- Password modal (supports show/hide) -------- */
+.modal-content .modal-form {
+  margin: 0;
+}
+
+/* Style input whether it's type=password or type=text */
+.modal-content .password-input,
+.modal-content input[type='password'],
+.modal-content input[type='text'] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+.modal-content .password-input:focus,
+.modal-content input[type='password']:focus,
+.modal-content input[type='text']:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.25);
+}
+
+/* Show password row */
+.pw-visibility {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* or flex-start if you prefer left-aligned */
+  gap: 8px;
+  margin: -4px 0 8px;
+}
+
+.pw-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pw-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ---- Confirm modal tweaks ---- */
+.modal-content .modal-message {
+  margin: 8px 0 16px;
+  color: var(--muted);
+}
+
+/* Keep destructive button width in line with primary */
+.modal-content .actions .btn.danger {
+  min-width: 110px;
 }

@@ -1,91 +1,208 @@
 // App.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import NoteEditor from './components/NoteEditor'
 import NoteList from './components/NoteList'
 import PasswordModal from './components/PasswordModal'
+import ConfirmModal from './components/ConfirmModal'
 import './styles.css'
 import { Note } from '../types'
 
 type ToastKind = 'info' | 'success' | 'error'
-type Toast = { id: number; kind: ToastKind; text: string }
+type Toast = {
+  id: number
+  kind: ToastKind
+  text: string
+  actionLabel?: string
+  onAction?: () => void
+  durationMs?: number
+}
 
 function App() {
   const [notes, setNotes] = useState<Note[]>([])
+  const [trash, setTrash] = useState<Note[]>([])
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [lockOnSave, setLockOnSave] = useState(false)
+
   const [modalOpen, setModalOpen] = useState(false)
   const [modalNoteId, setModalNoteId] = useState<number | null>(null)
   const [modalAction, setModalAction] = useState<'lock' | 'unlock'>('unlock')
   const [unlockThenEdit, setUnlockThenEdit] = useState(false)
   const [sessionUnlocked, setSessionUnlocked] = useState<Set<number>>(new Set())
+
   const [toasts, setToasts] = useState<Toast[]>([])
   const [query, setQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [showTrash, setShowTrash] = useState(false)
 
-  const allTags = React.useMemo(
-    () => Array.from(new Set(notes.flatMap((n) => n.tags ?? []))).sort(),
-    [notes]
-  )
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmNoteId, setConfirmNoteId] = useState<number | null>(null)
+
+  const allTags = useMemo(() => {
+    const src = showTrash ? trash : notes
+    return Array.from(new Set(src.flatMap((n) => n.tags ?? []))).sort()
+  }, [showTrash, notes, trash])
 
   const toggleFilterTag = (t: string) =>
     setSelectedTags((prev) =>
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     )
 
-  const pushToast = (text: string, kind: ToastKind = 'info') => {
-    const id = Date.now() + Math.random()
-    setToasts((t) => [...t, { id, kind, text }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000)
+  const openConfirm = (id: number) => {
+    setConfirmNoteId(id)
+    setConfirmOpen(true)
   }
 
-  const sortNotes = (arr: Note[]) =>
-    [...arr].sort((a, b) => {
-      if ((b.pinned ? 1 : 0) !== (a.pinned ? 1 : 0))
-        return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
-      return b.updatedAt - a.updatedAt
-    })
+  const closeConfirm = () => {
+    setConfirmOpen(false)
+    setConfirmNoteId(null)
+  }
 
-  const filtered = sortNotes(
-    notes.filter((n) => {
-      // tokenize query: OR across tokens
-      const raw = query.trim().toLowerCase()
-      const tokens = raw ? raw.split(/[\s,\/]+/).filter(Boolean) : []
+  const pushToast = (
+    text: string,
+    kind: ToastKind = 'info',
+    opts?: { actionLabel?: string; onAction?: () => void; durationMs?: number }
+  ) => {
+    const id = Date.now() + Math.random()
+    const toast: Toast = { id, kind, text, ...opts }
+    // setToasts((t) => [...t, toast])
+    // setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000)
+    // }
+    setToasts((t) => [...t, toast])
+    const ms = opts?.durationMs ?? 3000
+    const timer = setTimeout(
+      () => setToasts((t) => t.filter((x) => x.id !== id)),
+      ms
+    )
+    return {
+      id,
+      dismiss: () => {
+        clearTimeout(timer)
+        setToasts((t) => t.filter((x) => x.id !== id))
+      },
+    }
+  }
 
-      // search content only if not masked
-      const contentForSearch =
-        n.content && n.content !== 'Locked Note' ? n.content : ''
-
-      const textMatch =
-        tokens.length === 0 ||
-        tokens.some((q) => {
-          const inPreview = (n.preview || '').toLowerCase().includes(q)
-          const inContent = contentForSearch.toLowerCase().includes(q)
-          const inTags = (n.tags || []).some((t) => t.toLowerCase().includes(q))
-          return inPreview || inContent || inTags
-        })
-
-      const tags = n.tags ?? []
-      // const tagMatch =
-      //   selectedTags.length === 0 || selectedTags.every((t) => tags.includes(t)) // AND filter on chips
-      const tagMatch =
-        selectedTags.length === 0 || selectedTags.some((t) => tags.includes(t)) // OR
-
-      return textMatch && tagMatch
-    })
+  const sortNotes = useCallback(
+    (arr: Note[]) =>
+      [...arr].sort((a, b) => {
+        const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
+        if (pinDiff !== 0) return pinDiff
+        return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+      }),
+    []
   )
 
-  useEffect(() => {
-    const fetchNotes = async () => {
-      const fetchedNotes = await window.electronAPI.getNotes()
-      const sorted = sortNotes(fetchedNotes)
-      setNotes(sorted)
-      if (sorted.length > 0) {
-        setSelectedNote(sorted[0])
-      }
+  const sortTrash = useCallback(
+    (arr: Note[]) =>
+      [...arr].sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0)),
+    []
+  )
+
+  // const filtered = sortNotes(
+  //   notes.filter((n) => {
+  //     // tokenize query: OR across tokens
+  //     const raw = query.trim().toLowerCase()
+  //     const tokens = raw ? raw.split(/[\s,\/]+/).filter(Boolean) : []
+
+  //     // search content only if not masked
+  //     const contentForSearch =
+  //       n.content && n.content !== 'Locked Note' ? n.content : ''
+
+  //     const textMatch =
+  //       tokens.length === 0 ||
+  //       tokens.some((q) => {
+  //         const inPreview = (n.preview || '').toLowerCase().includes(q)
+  //         const inContent = contentForSearch.toLowerCase().includes(q)
+  //         const inTags = (n.tags || []).some((t) => t.toLowerCase().includes(q))
+  //         return inPreview || inContent || inTags
+  //       })
+
+  //     const tags = n.tags ?? []
+  //     // const tagMatch =
+  //     //   selectedTags.length === 0 || selectedTags.every((t) => tags.includes(t)) // AND filter on chips
+  //     const tagMatch =
+  //       selectedTags.length === 0 || selectedTags.some((t) => tags.includes(t)) // OR
+
+  //     return textMatch && tagMatch
+  //   })
+  // )
+
+  // const filterList = (list: Note[]) =>
+  //   sortNotes(
+  //     list.filter((n) => {
+  //       const q = query.trim().toLowerCase()
+  //       const inPreview = (n.preview || '').toLowerCase().includes(q)
+  //       const contentForSearch =
+  //         n.content && n.content !== 'Locked Note' ? n.content : ''
+  //       const inContent = contentForSearch.toLowerCase().includes(q)
+  //       const inTags = (n.tags || []).some((t) => t.toLowerCase().includes(q))
+  //       const textMatch = !q || inPreview || inContent || inTags
+
+  //       const tags = n.tags ?? []
+  //       const tagMatch = selectedTags.every((t) => tags.includes(t)) // AND
+
+  //       return textMatch && tagMatch
+  //     })
+  //   )
+
+  // Shared filtering (text + tag match)
+  const passesFilters = useCallback(
+    (n: Note) => {
+      const q = query.trim().toLowerCase()
+      const inPreview = (n.preview || '').toLowerCase().includes(q)
+      const contentForSearch =
+        n.content && n.content !== 'Locked Note' ? n.content : ''
+      const inContent = contentForSearch.toLowerCase().includes(q)
+      const inTags = (n.tags || []).some((t) => t.toLowerCase().includes(q))
+      const textMatch = !q || inPreview || inContent || inTags
+
+      const tags = n.tags ?? []
+      const tagMatch = selectedTags.every((t) => tags.includes(t)) // AND
+
+      return textMatch && tagMatch
+    },
+    [query, selectedTags]
+  )
+
+  const filtered = useMemo(
+    () => sortNotes(notes.filter(passesFilters)),
+    [notes, passesFilters, sortNotes]
+  )
+  const filteredTrash = useMemo(
+    () => sortTrash(trash.filter(passesFilters)),
+    [trash, passesFilters, sortTrash]
+  )
+
+  // const filtered = filterList(notes)
+  // const filteredTrash = filterList(trash)
+
+  // useEffect(() => {
+  //   const fetchNotes = async () => {
+  //     const fetchedNotes = await window.electronAPI.getNotes()
+  //     const sorted = sortNotes(fetchedNotes)
+  //     setNotes(sorted)
+  //     if (sorted.length > 0) {
+  //       setSelectedNote(sorted[0])
+  //     }
+  //   }
+  //   fetchNotes()
+  // }, [])
+
+  // Fetch notes + trash (stable function to satisfy eslint)
+  const fetchNotes = useCallback(async () => {
+    const fetchedNotes = await window.electronAPI.getNotes()
+    const fetchedTrash = await window.electronAPI.getTrash()
+    setNotes(sortNotes(fetchedNotes))
+    setTrash(sortTrash(fetchedTrash))
+    if (fetchedNotes.length > 0) {
+      setSelectedNote(sortNotes(fetchedNotes)[0])
     }
+  }, [sortNotes, sortTrash])
+
+  useEffect(() => {
     fetchNotes()
-  }, [])
+  }, [fetchNotes])
 
   const handleTogglePin = async (noteId: number, pinned: boolean) => {
     const res = await window.electronAPI.togglePin(noteId, pinned)
@@ -126,6 +243,11 @@ function App() {
   }
 
   const handleSelectNote = (note: Note) => {
+    if (showTrash) {
+      setSelectedNote(note)
+      setIsEditing(false)
+      return
+    }
     const hasDecrypted = note.locked && note.content !== 'Locked Note'
     const unlockedThisSession = note.locked && sessionUnlocked.has(note.noteId)
 
@@ -136,7 +258,7 @@ function App() {
       setModalNoteId(note.noteId)
       setModalOpen(true)
       setIsEditing(false)
-      return
+      // return
     } else {
       setSelectedNote(note)
       setLockOnSave(false)
@@ -145,6 +267,12 @@ function App() {
   }
 
   const handleNew = () => {
+    if (showTrash) {
+      setShowTrash(false)
+      setIsEditing(true)
+      setSelectedNote(null)
+      setLockOnSave(false)
+    }
     setIsEditing(true)
     setSelectedNote(null)
     setLockOnSave(false)
@@ -289,21 +417,84 @@ function App() {
     setLockOnSave(note.locked)
   }
 
+  // const onDeleteNote = async (noteId: number) => {
+  //   const result = await window.electronAPI.deleteNote(noteId)
+  //   if (result.success) {
+  //     setNotes(notes.filter((note) => note.noteId !== noteId))
+  //     if (selectedNote?.noteId === noteId) setSelectedNote(null)
+  //     pushToast('Deleted', 'success')
+  //   } else {
+  //     // alert('Failed to delete note')
+  //     pushToast('Failed to delete note', 'error')
+  //   }
+  // }
+
   const onDeleteNote = async (noteId: number) => {
     const result = await window.electronAPI.deleteNote(noteId)
     if (result.success) {
-      setNotes(notes.filter((note) => note.noteId !== noteId))
+      const removed = notes.find((n) => n.noteId === noteId) || null
+      setNotes((prev) => prev.filter((n) => n.noteId !== noteId))
       if (selectedNote?.noteId === noteId) setSelectedNote(null)
-      pushToast('Deleted', 'success')
+      if (removed) {
+        setTrash((prev) =>
+          sortTrash([...prev, { ...removed, deletedAt: Date.now() }])
+        )
+      }
+
+      const undo = async () => {
+        const r = await window.electronAPI.restoreNote(noteId)
+        if (r.success) {
+          setTrash((prev) => prev.filter((n) => n.noteId !== noteId))
+          setNotes((prev) => sortNotes([...prev, r.note]))
+          pushToast('Restored', 'success')
+        } else {
+          pushToast(r.error, 'error')
+        }
+      }
+
+      pushToast('Moved to Trash', 'success', {
+        actionLabel: 'Undo',
+        onAction: undo,
+        durationMs: 5000,
+      })
     } else {
-      // alert('Failed to delete note')
       pushToast('Failed to delete note', 'error')
     }
   }
+
+  const handleRestoreNote = async (noteId: number) => {
+    const r = await window.electronAPI.restoreNote(noteId)
+    if (r.success) {
+      setTrash((prev) => prev.filter((n) => n.noteId !== noteId))
+      setNotes((prev) => sortNotes([...prev, r.note]))
+      pushToast('Restored', 'success')
+    } else {
+      pushToast(r.error, 'error')
+    }
+  }
+
+  // const handleDeleteForever = async (noteId: number) => {
+  const handleDeleteForever = async () => {
+    if (confirmNoteId == null) return
+    // const r = await window.electronAPI.deleteForever(noteId)
+    const r = await window.electronAPI.deleteForever(confirmNoteId)
+    if (r.success) {
+      setTrash((prev) => prev.filter((n) => n.noteId !== confirmNoteId))
+      if (selectedNote?.noteId === confirmNoteId) setSelectedNote(null)
+      pushToast('Deleted forever', 'success')
+    } else {
+      pushToast(r.error, 'error')
+    }
+    closeConfirm()
+  }
+
   const unlockedThisSession =
     !!selectedNote?.locked &&
     (selectedNote.content !== 'Locked Note' ||
       (selectedNote.noteId != null && sessionUnlocked.has(selectedNote.noteId)))
+
+  const visibleList = showTrash ? filteredTrash : filtered
+  const totalInTab = showTrash ? trash.length : notes.length
 
   return (
     <div className="app">
@@ -312,12 +503,49 @@ function App() {
           {' '}
           <span className="brand-mark">🗒️</span> Secure Notes
         </div>
-        <div className="header-meta">
+        <div className="tabs">
+          <button
+            className={`tab ${!showTrash ? 'active' : ''}`}
+            // onClick={() => setShowTrash(false)}
+            onClick={() => {
+              setShowTrash(false)
+              setSelectedNote((prev) => (prev && prev.deletedAt ? null : prev))
+            }}
+          >
+            Notes
+          </button>
+          <button
+            className={`tab ${showTrash ? 'active' : ''}`}
+            onClick={() => {
+              setShowTrash(true)
+              setIsEditing(false)
+              setSelectedNote(null)
+            }}
+          >
+            Trash
+          </button>
+        </div>
+        {/* <div className="header-meta">
           <span>
             {filtered.length} of {notes.length} notes
           </span>
           <span className="dot">•</span>
           <span>{notes.filter((n) => n.pinned).length} pinned</span>
+        </div> */}
+        <div className="header-meta">
+          <span>
+            {/* {!showTrash ? filtered.length : filteredTrash.length} of{' '}
+            {!showTrash ? notes.length : trash.length}{' '}
+            {!showTrash ? 'notes' : 'trashed'} */}
+            {visibleList.length} of {totalInTab}{' '}
+            {showTrash ? 'trashed' : 'notes'}
+          </span>
+          {!showTrash && (
+            <>
+              <span className="dot">•</span>
+              <span>{notes.filter((n) => n.pinned).length} pinned</span>
+            </>
+          )}
         </div>
       </header>
       <div className="app-body">
@@ -336,7 +564,8 @@ function App() {
             />
             {query.trim() && (
               <div className="search-stats" role="status" aria-live="polite">
-                {filtered.length} result{filtered.length === 1 ? '' : 's'}
+                {visibleList.length} result{visibleList.length === 1 ? '' : 's'}
+                {/* {filtered.length} result{filtered.length === 1 ? '' : 's'} */}
               </div>
             )}
           </div>
@@ -367,12 +596,28 @@ function App() {
             </div>
           )}
           <NoteList
-            notes={filtered}
+            // notes={filtered}
+            // notes={!showTrash ? filtered : filteredTrash}
+            notes={visibleList}
             selectedId={selectedNote?.noteId ?? null}
             onSelectNote={handleSelectNote}
-            onEditNote={onEditNote}
-            onDeleteNote={onDeleteNote}
-            onTogglePin={handleTogglePin}
+            // onEditNote={onEditNote}
+            // onDeleteNote={onDeleteNote}
+            // onTogglePin={handleTogglePin}
+            onEditNote={!showTrash ? onEditNote : undefined}
+            onDeleteNote={!showTrash ? onDeleteNote : undefined}
+            onTogglePin={!showTrash ? handleTogglePin : undefined}
+            onRestoreNote={showTrash ? handleRestoreNote : undefined}
+            // onDeleteForever={showTrash ? handleDeleteForever : undefined}
+            onDeleteForever={showTrash ? (id) => openConfirm(id) : undefined}
+            mode={showTrash ? 'trash' : 'active'}
+            emptyMessage={
+              showTrash
+                ? 'No deleted notes'
+                : query.trim()
+                ? 'No matching notes'
+                : 'No notes yet. Create a new note.'
+            }
           />
         </div>
         <div className="note-editor">
@@ -411,11 +656,37 @@ function App() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleUnlockNote}
       />
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete forever?"
+        message="This note will be permanently removed. This action cannot be undone."
+        confirmText="Delete forever"
+        onClose={closeConfirm}
+        onConfirm={handleDeleteForever}
+      />
       {/* Toasts */}
-      <div className="toast-stack" aria-live="polite" aria-atomic="true">
+      {/* <div className="toast-stack" aria-live="polite" aria-atomic="true">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
             {t.text}
+          </div>
+        ))}
+      </div> */}
+      <div className="toast-stack" aria-live="polite" aria-atomic="true">
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast ${t.kind}`}>
+            <span className="toast-text">{t.text}</span>
+            {t.actionLabel && t.onAction && (
+              <button
+                className="toast-action"
+                onClick={() => {
+                  t.onAction?.()
+                  setToasts((x) => x.filter((z) => z.id !== t.id))
+                }}
+              >
+                {t.actionLabel}
+              </button>
+            )}
           </div>
         ))}
       </div>

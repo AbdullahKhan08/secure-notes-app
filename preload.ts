@@ -11,6 +11,9 @@ type EditResult =
   | { success: true; note: Note }
   | { success: false; error: string }
 type DeleteResult = { success: true } | { success: false; error: string }
+type RestoreResult =
+  | { success: true; note: Note }
+  | { success: false; error: string }
 
 contextBridge.exposeInMainWorld('electronAPI', {
   saveNote: (
@@ -56,6 +59,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   deleteNote: (noteId: number): Promise<DeleteResult> =>
     ipcRenderer.invoke('delete-note', noteId),
+
+  getTrash: (): Promise<Note[]> => ipcRenderer.invoke('get-trash'),
+  restoreNote: (noteId: number): Promise<RestoreResult> =>
+    ipcRenderer.invoke('restore-note', noteId),
+  deleteForever: (noteId: number): Promise<DeleteResult> =>
+    ipcRenderer.invoke('delete-forever', noteId),
 
   togglePin: (noteId: number, pinned: boolean): Promise<EditResult> =>
     ipcRenderer.invoke('toggle-pin', noteId, pinned),

@@ -149,7 +149,7 @@ ipcMain.handle(
       const file = getNotesFilePath()
       const notes: Note[] = await fs.readJson(file).catch(() => [])
       const now = Date.now()
-      const id = noteId ?? Date.now()
+      const id = noteId ?? now
       const preview = makePreview(content)
       const tagList = cleanTags(tags)
 
@@ -234,7 +234,9 @@ ipcMain.handle('get-notes', async (): Promise<Note[]> => {
     }
 
     // return notes.map(maskIfLocked)
-    return notes.map((n) => maskIfLocked({ ...n, tags: n.tags ?? [] }))
+    return notes
+      .filter((n) => !n.deletedAt)
+      .map((n) => maskIfLocked({ ...n, tags: n.tags ?? [] }))
   } catch (e) {
     console.error(e)
     return []
@@ -255,6 +257,7 @@ ipcMain.handle(
       const notes: Note[] = await fs.readJson(file)
       const note = notes.find((n) => n.noteId === noteId)
       if (!note) throw new Error('Note not found')
+      if (note.deletedAt) throw new Error('This note is in Trash')
       if (!note.locked) return { success: true, note: stripSecrets(note) }
 
       const ok = await bcrypt.compare(password, note.passwordHash || '')
@@ -296,6 +299,7 @@ ipcMain.handle(
       if (noteIndex === -1) throw new Error('Note not found')
 
       const note = notes[noteIndex]
+      if (note.deletedAt) throw new Error('This note is in Trash')
       const now = Date.now()
       const preview = makePreview(content)
       const tagList = cleanTags(tags)
@@ -345,6 +349,28 @@ ipcMain.handle(
   }
 )
 
+// old
+// ipcMain.handle(
+//   'delete-note',
+//   async (
+//     event,
+//     noteId: number
+//   ): Promise<{ success: true } | { success: false; error: string }> => {
+//     try {
+//       const file = getNotesFilePath()
+//       let notes: Note[] = await fs.readJson(file)
+
+//       notes = notes.filter((n) => n.noteId !== noteId)
+//       await fs.writeJson(file, notes)
+//       return { success: true }
+//     } catch (e: any) {
+//       console.error(e)
+//       return { success: false, error: e.message }
+//     }
+//   }
+// )
+
+// new
 ipcMain.handle(
   'delete-note',
   async (
@@ -353,10 +379,13 @@ ipcMain.handle(
   ): Promise<{ success: true } | { success: false; error: string }> => {
     try {
       const file = getNotesFilePath()
-      let notes: Note[] = await fs.readJson(file)
-
-      notes = notes.filter((n) => n.noteId !== noteId)
-      await fs.writeJson(file, notes)
+      const notes: Note[] = await fs.readJson(file)
+      const i = notes.findIndex((n) => n.noteId === noteId)
+      if (i === -1) throw new Error('Note not found')
+      const ts = Date.now()
+      notes[i].deletedAt = ts
+      notes[i].updatedAt = ts
+      await fs.writeJson(file, notes, { spaces: 2 })
       return { success: true }
     } catch (e: any) {
       console.error(e)
@@ -364,6 +393,64 @@ ipcMain.handle(
     }
   }
 )
+
+ipcMain.handle(
+  'restore-note',
+  async (
+    event,
+    noteId: number
+  ): Promise<
+    { success: true; note: Note } | { success: false; error: string }
+  > => {
+    try {
+      const file = getNotesFilePath()
+      const notes: Note[] = await fs.readJson(file)
+      const i = notes.findIndex((n) => n.noteId === noteId)
+      if (i === -1) throw new Error('Note not found')
+
+      notes[i].deletedAt = undefined
+      notes[i].updatedAt = Date.now()
+      await fs.writeJson(file, notes, { spaces: 2 })
+      return { success: true, note: maskIfLocked(notes[i]) }
+    } catch (e: any) {
+      console.error(e)
+      return { success: false, error: e.message }
+    }
+  }
+)
+
+ipcMain.handle(
+  'delete-forever',
+  async (
+    event,
+    noteId: number
+  ): Promise<{ success: true } | { success: false; error: string }> => {
+    try {
+      const file = getNotesFilePath()
+      const notes: Note[] = await fs.readJson(file)
+      const filtered = notes.filter((n) => n.noteId !== noteId)
+      await fs.writeJson(file, filtered, { spaces: 2 })
+      return { success: true }
+    } catch (e: any) {
+      console.error(e)
+      return { success: false, error: e.message }
+    }
+  }
+)
+
+ipcMain.handle('get-trash', async (): Promise<Note[]> => {
+  try {
+    const file = getNotesFilePath()
+    const notes: Note[] = await fs.readJson(file).catch(() => [])
+    return notes
+      .filter((n) => !!n.deletedAt)
+      .sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0))
+      .map((n) => maskIfLocked({ ...n, tags: n.tags ?? [] }))
+  } catch (e) {
+    console.error(e)
+    return []
+  }
+})
 
 ipcMain.handle(
   'toggle-pin',
@@ -380,6 +467,7 @@ ipcMain.handle(
       const i = notes.findIndex((n) => n.noteId === noteId)
       if (i === -1) throw new Error('Note not found')
       const n = notes[i]
+      if (n.deletedAt) throw new Error('This note is in Trash')
       n.pinned = !!pinned
       n.updatedAt = Date.now()
       notes[i] = n

@@ -63,13 +63,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     }
   }
 
+  // Commit any pending tag on blur (tiny UX nicety)
+  const onTagBlur: React.FocusEventHandler<HTMLInputElement> = () => {
+    if (tagInput.trim()) {
+      addTag(tagInput)
+      setTagInput('')
+    }
+  }
+
   useEffect(() => {
+    const existing = !!note?.noteId
     if (isEditing) {
-      if (note?.noteId != null) {
-        setContent(note.content ?? '')
-      } else {
-        setContent('')
-      }
+      setContent(existing ? note?.content ?? '' : '')
     } else {
       setContent(note?.content ?? '')
     }
@@ -212,6 +217,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   const isLocked = !!note?.locked && note?.content === 'Locked Note'
 
+  const isNewNote = !note?.noteId
+  const willLockOnSave =
+    lockOnSave && (isNewNote || !originalLocked || isChangingPassword)
+
+  const saveLabel = willLockOnSave ? 'Lock & Save' : 'Save Note'
+  const saveTitle = willLockOnSave
+    ? isChangingPassword
+      ? 'Save with new password'
+      : 'Save and encrypt this note'
+    : 'Save without changing lock status'
+
   return (
     <div className="note-editor-container">
       {isEditing ? (
@@ -264,8 +280,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
               onClick={handleSaveClick}
               disabled={!content.trim()}
               aria-disabled={!content.trim()}
+              title={saveTitle}
             >
-              {lockOnSave ? 'Lock & Save' : 'Save Note'}
+              {/* {lockOnSave ? 'Lock & Save' : 'Save Note'} */}
+              {saveLabel}
             </button>
           </div>
 
@@ -301,6 +319,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={onTagKeyDown}
+              onBlur={onTagBlur}
               aria-label="Add tag"
             />
           </div>

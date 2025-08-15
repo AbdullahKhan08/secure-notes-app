@@ -6,9 +6,13 @@ interface NotesListProps {
   notes: Note[]
   selectedId: number | null
   onSelectNote: (note: Note) => void
-  onEditNote: (noteId: number) => void
-  onDeleteNote: (noteId: number) => void
-  onTogglePin: (noteId: number, pinned: boolean) => void
+  onEditNote?: (noteId: number) => void
+  onDeleteNote?: (noteId: number) => void
+  onTogglePin?: (noteId: number, pinned: boolean) => void
+  onRestoreNote?: (noteId: number) => void
+  onDeleteForever?: (noteId: number) => void
+  mode?: 'active' | 'trash'
+  emptyMessage?: string // NEW
 }
 
 function NotesList({
@@ -18,6 +22,10 @@ function NotesList({
   onEditNote,
   onDeleteNote,
   onTogglePin,
+  onRestoreNote,
+  onDeleteForever,
+  mode = 'active',
+  emptyMessage,
 }: NotesListProps) {
   const title = (n: Note) =>
     n.preview?.trim() || (n.locked ? 'Locked Note' : 'Untitled')
@@ -57,28 +65,45 @@ function NotesList({
   if (notes.length === 0) {
     return (
       <div className="notes-list-container">
-        <p>No notes yet. Create a new note.</p>
+        <p>{emptyMessage ?? 'No notes yet. Create a new note.'}</p>
       </div>
     )
   }
   return (
     <div className="notes-list-container">
-      <ul className="notes-ul" role="listbox" aria-label="Notes">
+      <ul
+        className="notes-ul"
+        role={mode === 'trash' ? undefined : 'listbox'}
+        aria-label={mode === 'trash' ? 'Deleted notes' : 'Notes'}
+      >
         {notes.map((note) => {
           const isSelected = selectedId === note.noteId
           const createdAt = note.createdAt ?? note.noteId
           const updatedAt = note.updatedAt ?? createdAt
+          const deletedAt = note.deletedAt
+          const showPinned = mode !== 'trash' && !!note.pinned
+
           return (
             <li
               key={note.noteId}
-              className={`note-row ${isSelected ? 'selected' : ''}`}
-              role="option"
-              aria-selected={isSelected}
+              className={`note-row ${
+                mode !== 'trash' && isSelected ? 'selected' : ''
+              }`}
+              role={mode === 'trash' ? undefined : 'option'}
+              aria-selected={mode === 'trash' ? undefined : isSelected}
               aria-label={`Note: ${title(note)}`}
               tabIndex={0}
-              onClick={() => onSelectNote(note)}
-              onKeyDown={(e) => e.key === 'Enter' && onSelectNote(note)}
-              // title={title(note)}
+              onClick={() => {
+                if (mode !== 'trash') onSelectNote(note)
+              }}
+              onKeyDown={(e) => {
+                if (mode === 'trash') return
+                const k = e.key.toLowerCase()
+                if (k === 'enter' || k === ' ') {
+                  e.preventDefault()
+                  onSelectNote(note)
+                }
+              }}
               title={`Created ${fullDate(createdAt)}`}
             >
               <div className="note-main">
@@ -99,50 +124,89 @@ function NotesList({
                     ))}
                   </div>
                 )}
-                <div className="note-meta">
+                {/* <div className="note-meta">
                   {note.pinned ? '📌 Pinned · ' : ''}
-                  {/* {formatCreated(note.createdAt)} */}
+              
                   {relTime(updatedAt)}
+                </div> */}
+                <div className="note-meta">
+                  {mode === 'trash' ? (
+                    <>Deleted {relTime(deletedAt ?? updatedAt)}</>
+                  ) : (
+                    <>
+                      {showPinned ? '📌 Pinned · ' : ''}
+                      {relTime(updatedAt)}
+                    </>
+                  )}
                 </div>
               </div>
               <div className="row-actions">
-                <button
-                  type="button"
-                  className={`btn pin ${note.pinned ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onTogglePin(note.noteId, !note.pinned)
-                  }}
-                  aria-pressed={!!note.pinned}
-                  aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
-                  title={note.pinned ? 'Unpin' : 'Pin'}
-                >
-                  {note.pinned ? '★' : '☆'}
-                </button>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onEditNote(note.noteId)
-                  }}
-                  aria-label="Edit note"
-                  title="Edit"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="btn danger"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteNote(note.noteId)
-                  }}
-                  aria-label="Delete note"
-                  title="Delete"
-                >
-                  Delete
-                </button>
+                {mode !== 'trash' ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`btn pin ${note.pinned ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onTogglePin?.(note.noteId, !note.pinned)
+                      }}
+                      aria-pressed={!!note.pinned}
+                      aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
+                      title={note.pinned ? 'Unpin' : 'Pin'}
+                    >
+                      {note.pinned ? '★' : '☆'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditNote?.(note.noteId)
+                      }}
+                      aria-label="Edit note"
+                      title="Edit"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn danger"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteNote?.(note.noteId)
+                      }}
+                      aria-label="Delete note"
+                      title="Delete"
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onRestoreNote?.(note.noteId)
+                      }}
+                      aria-label="Restore note"
+                      title="Restore"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      className="btn danger"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteForever?.(note.noteId)
+                      }}
+                      aria-label="Delete note forever"
+                      title="Delete forever"
+                    >
+                      Delete forever
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           )

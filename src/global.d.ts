@@ -38,6 +38,18 @@ declare global {
         noteId: number
       ) => Promise<{ success: true } | { success: false; error: string }>
 
+      getTrash: () => Promise<Note[]>
+
+      restoreNote: (
+        noteId: number
+      ) => Promise<
+        { success: true; note: Note } | { success: false; error: string }
+      >
+
+      deleteForever: (
+        noteId: number
+      ) => Promise<{ success: true } | { success: false; error: string }>
+
       togglePin: (
         noteId: number,
         pinned: boolean

@@ -69,3 +69,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   togglePin: (noteId: number, pinned: boolean): Promise<EditResult> =>
     ipcRenderer.invoke('toggle-pin', noteId, pinned),
 })
+
+contextBridge.exposeInMainWorld('appAPI', {
+  getVersion: () => ipcRenderer.invoke('app-version'),
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+})

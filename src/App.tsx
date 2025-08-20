@@ -9,6 +9,7 @@ import { Note } from '../types'
 import useTheme from './hooks/useTheme'
 import useIdleLock from './hooks/useIdleLock'
 import useUnsavedChangesGuard from './hooks/useUnsavedChangesGuard'
+import { checkForUpdateAndPrompt } from './softUpdater'
 // import logoUrl from './assets/icons/secure-notes-logo.svg'
 
 type ToastKind = 'info' | 'success' | 'error'
@@ -230,6 +231,10 @@ function App() {
   useEffect(() => {
     fetchNotes()
   }, [fetchNotes])
+
+  useEffect(() => {
+    checkForUpdateAndPrompt()
+  }, [])
 
   useIdleLock(IDLE_MS, autoLock)
 

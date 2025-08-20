@@ -57,6 +57,10 @@ declare global {
         { success: true; note: Note } | { success: false; error: string }
       >
     }
+    appAPI: {
+      getVersion: () => Promise<string>
+      openExternal: (url: string) => Promise<void>
+    }
   }
 }
 

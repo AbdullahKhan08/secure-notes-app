@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import fs from 'fs-extra'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
@@ -575,3 +575,10 @@ ipcMain.handle(
     }
   }
 )
+
+// auto updater
+
+ipcMain.handle('app-version', () => app.getVersion())
+ipcMain.handle('open-external', (_e, url: string) => {
+  if (url) shell.openExternal(url)
+})

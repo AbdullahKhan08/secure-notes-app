@@ -545,7 +545,7 @@ function App() {
             alt=""
             style={{ marginRight: 2 }}
           />
-          Secure Notes
+          Secure Notes App
         </div>
         <div className="tabs">
           <button

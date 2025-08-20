@@ -1,8 +1,8 @@
 export interface Note {
   noteId: number
-  content: string // Plaintext content for unlocked notes
+  content: string
   preview: string
-  locked: boolean // Whether the note is locked or not
+  locked: boolean
   iv?: string
   encryptedData?: string
   passwordHash?: string

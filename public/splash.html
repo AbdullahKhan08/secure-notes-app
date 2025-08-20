@@ -1,0 +1,357 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Secure Notes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #fffdf6;
+        --panel: #f6f3e7;
+        --border: #e8e2c8;
+        --text: #2b2b2b;
+        --muted: #6b6b6b;
+        --accent: #f4c84a;
+        --note-bg: #fffbea;
+        --note-border: #f3e8a1;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101217;
+          --panel: #141923;
+          --border: #2a2f3a;
+          --text: #e6e6e6;
+          --muted: #a1a1aa;
+          --accent: #f4c84a;
+          --note-bg: #181d28;
+          --note-border: #2b3140;
+        }
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Arial, sans-serif;
+      }
+      .card {
+        width: min(520px, 92%);
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        padding: 28px 24px;
+        text-align: center;
+      }
+      @media (prefers-color-scheme: dark) {
+        .card {
+          background: #131823;
+        }
+      }
+      .logo {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 12px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--note-bg);
+        border: 1px solid var(--note-border);
+        font-size: 26px;
+      }
+
+      .logo img {
+        width: 100px;
+        height: 100px;
+        margin-right: 2px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+      .sub {
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+      .bar {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--note-border);
+        position: relative;
+        overflow: hidden;
+      }
+      .bar::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        background: var(--accent);
+        animation: slide 1.15s linear infinite;
+        border-radius: 999px;
+      }
+      @keyframes slide {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(250%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">
+        <img src="icons/secure-notes-logo.svg" />
+      </div>
+      <div class="title">Secure Notes</div>
+      <div class="sub">Starting up…</div>
+      <div class="bar"></div>
+    </div>
+  </body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Secure Notes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      :root {
+        --bg: #fffdf6;
+        --panel: #f6f3e7;
+        --border: #e8e2c8;
+        --text: #2b2b2b;
+        --muted: #6b6b6b;
+        --accent: #f4c84a;
+        --note-bg: #fffbea;
+        --note-border: #f3e8a1;
+        --card: #ffffff;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101217;
+          --panel: #141923;
+          --border: #2a2f3a;
+          --text: #e6e6e6;
+          --muted: #a1a1aa;
+          --accent: #f4c84a;
+          --note-bg: #181d28;
+          --note-border: #2b3140;
+          --card: #131823;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Arial, sans-serif;
+      }
+
+      /* container */
+      .card {
+        width: min(540px, 92%);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 28px 24px;
+        text-align: center;
+        animation: fadeIn 0.18s ease-out both, rise 0.22s ease-out both;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes rise {
+        from {
+          transform: translateY(6px) scale(0.98);
+        }
+        to {
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .card {
+        backdrop-filter: saturate(180%) blur(6px);
+      }
+      .logo {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) inset;
+      }
+      .bar::after {
+        animation: slide 1.2s ease-in-out infinite;
+      }
+
+      /* logo container */
+      .logo-wrap {
+        --size: 112px; /* tweak size here */
+        width: var(--size);
+        height: var(--size);
+        margin: 4px auto 16px;
+        display: grid;
+        place-items: center;
+        position: relative;
+        border-radius: 999px;
+
+        /* soft Apple-Notesy pill with a whisper of gloss */
+        background: radial-gradient(
+            120% 120% at 30% 20%,
+            rgba(255, 255, 255, 0.55),
+            transparent 70%
+          ),
+          var(--note-bg);
+        border: 1px solid var(--note-border);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+
+        animation: splash-pop 0.28s ease-out both;
+        will-change: transform, opacity;
+      }
+
+      /* subtle inner ring */
+      .logo-wrap::after {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        pointer-events: none;
+      }
+
+      /* scope the image styling to the logo only */
+      .logo-wrap img,
+      .logo-wrap svg {
+        width: 70%;
+        height: 70%;
+        display: block;
+      }
+
+      /* tiny entrance */
+      @keyframes splash-pop {
+        from {
+          transform: scale(0.98);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* dark polish */
+      @media (prefers-color-scheme: dark) {
+        .logo-wrap {
+          background: linear-gradient(180deg, #151b26, #0f141d), var(--note-bg);
+          box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+        }
+        .logo-wrap::after {
+          border-color: rgba(255, 255, 255, 0.06);
+        }
+      }
+
+      /* respect reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        .logo-wrap {
+          animation: none;
+        }
+      }
+      /* title / sub */
+      .title {
+        font-weight: 700;
+        font-size: 18px;
+        margin-bottom: 6px;
+      }
+      .sub {
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      /* progress bar */
+      .bar {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--note-border);
+        position: relative;
+        overflow: hidden;
+      }
+      .bar::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        background: var(--accent);
+        border-radius: 999px;
+        animation: slide 1.15s linear infinite;
+      }
+      @keyframes slide {
+        0% {
+          transform: translateX(-110%);
+        }
+        100% {
+          transform: translateX(270%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          animation: none;
+        }
+        .bar::after {
+          animation: none;
+          width: 35%;
+        }
+      }
+
+      /* tiny footer */
+      .foot {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        opacity: 0.9;
+      }
+
+      /* inline svg sizing */
+      .logo-wrap svg {
+        width: 64px;
+        height: 64px;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card" role="dialog" aria-label="Starting Secure Notes">
+      <div class="logo-wrap" aria-hidden="true">
+        <img src="icons/secure-notes-logo.svg" />
+      </div>
+      <div class="title">Secure Notes</div>
+      <div class="sub">Starting up…</div>
+      <div class="bar" aria-hidden="true"></div>
+      <div class="foot">Optimizing privacy & encryption</div>
+    </div>
+  </body>
+</html>

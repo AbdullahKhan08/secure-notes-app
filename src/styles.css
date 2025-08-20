@@ -11,6 +11,7 @@
   --accent-hover: #eab308;
   --note-bg: #fffbea;
   --note-border: #f3e8a1;
+  color-scheme: light dark;
 }
 
 /* =========================
@@ -18,6 +19,25 @@
    ========================= */
 * {
   box-sizing: border-box;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modalIn {
+  from {
+    transform: translateY(6px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 html,
@@ -76,11 +96,13 @@ body {
   border-radius: 12px;
   background: #fff;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+  will-change: transform, box-shadow;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
 .note-row:hover {
   background: #fffef6;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px) scale(1.01);
 }
 .note-row.selected {
   background: #fffdf0;
@@ -222,7 +244,9 @@ textarea:focus-visible,
 
 textarea {
   width: 100%;
-  height: 60vh;
+  height: 65vh;
+  flex: 1 1 auto;
+  min-height: 220px;
   padding: 16px 14px;
   font-size: 16px;
   line-height: 1.5;
@@ -258,6 +282,8 @@ textarea:focus {
   background: #fff;
   padding: 14px;
   max-height: calc(100vh - 210px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -286,14 +312,23 @@ textarea:focus {
   border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
+  will-change: transform, background, border-color;
   transition: background 0.15s ease, border-color 0.15s ease,
-    transform 0.02s ease;
+    transform 0.12s ease;
 }
 .btn:hover {
   background: #fffef5;
+  transform: translateY(-1px);
 }
 .btn:active {
   transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-row:hover,
+  .btn:hover {
+    transform: none !important;
+  }
 }
 
 .btn.primary {
@@ -333,6 +368,7 @@ textarea:focus {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: overlayIn 0.16s ease-out;
 }
 
 .modal-content {
@@ -344,6 +380,7 @@ textarea:focus {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--border);
   text-align: center;
+  animation: modalIn 0.18s ease-out;
 }
 
 .modal-content h3 {
@@ -553,7 +590,7 @@ textarea:focus {
 
 /* Tiny search result line to declutter header */
 .search-stats {
-  margin: -4px 0 8px; /* pulls closer to input */
+  margin: 10px 0 8px; /* pulls closer to input */
   font-size: 12px;
   color: var(--muted);
   padding-left: 2px;
@@ -903,4 +940,664 @@ textarea:focus {
 /* Keep destructive button width in line with primary */
 .modal-content .actions .btn.danger {
   min-width: 110px;
+}
+
+/* Password strength meter */
+.pw-strength {
+  margin: 6px 0 10px;
+  text-align: left;
+}
+.pw-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.pw-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+  transition: width 0.2s ease;
+  border-radius: 999px;
+}
+.pw-bar.s1::after {
+  width: 25%;
+}
+.pw-bar.s2::after {
+  width: 50%;
+}
+.pw-bar.s3::after {
+  width: 75%;
+}
+.pw-bar.s4::after {
+  width: 100%;
+}
+
+.pw-strength-label {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- final dark-mode fixes (append at end so they win the cascade) --- */
+
+/* Auto dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101217;
+    --panel: #141923;
+    --border: #2a2f3a;
+    --text: #e6e6e6;
+    --muted: #a1a1aa;
+    --accent: #f4c84a;
+    --accent-hover: #eab308;
+    --note-bg: #181d28;
+    --note-border: #2b3140;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* panels & cards */
+  .notes-list {
+    background: var(--panel);
+    border-right-color: var(--border);
+  }
+  .note-row,
+  .editor-toolbar,
+  .viewer-header,
+  .empty-card,
+  .tag-editor,
+  .viewer-tags-row,
+  .toast,
+  .modal-content,
+  .note-editor {
+    background: #131823;
+    border-color: var(--border);
+  }
+
+  /* inputs */
+  .search-input,
+  .tag-input,
+  .modal-content .password-input,
+  .modal-content input[type='password'],
+  .modal-content input[type='text'] {
+    background: #0f141d;
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .search-input::placeholder,
+  .tag-input::placeholder {
+    color: var(--muted);
+  }
+
+  /* content areas */
+  .note-content-view {
+    background: #0f141d;
+    border-color: var(--border);
+  }
+  textarea {
+    background: var(--note-bg);
+    border-color: var(--note-border);
+    color: var(--text);
+  }
+
+  /* chips/buttons */
+  .tag-chip {
+    background: #0f141d;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+  .tag-chip.on {
+    background: #1a2130;
+    border-color: var(--accent);
+    color: #e8d088;
+  }
+  .btn {
+    background: #141923;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn:hover {
+    background: #151c2a;
+  }
+  .btn.primary {
+    color: #1a1a1a;
+  }
+  .btn.danger {
+    background: #27181b;
+    border-color: #57343a;
+    color: #ffb4b4;
+  }
+  .btn.danger:hover {
+    background: #2f1c20;
+  }
+
+  /* status chips */
+  .status-chip {
+    background: #141923;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+  .status-chip.locked {
+    background: #2a230f;
+    border-color: #4a3a12;
+    color: #e7ca74;
+  }
+  .status-chip.unlocked {
+    background: #142515;
+    border-color: #254a27;
+    color: #b9e7b6;
+  }
+
+  /* hover treatments */
+  .note-row:hover {
+    background: #171e2b;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+  }
+
+  /* headers */
+  .app-header {
+    background: rgba(16, 18, 23, 0.85);
+    border-bottom-color: var(--border);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  /* scrollbars (WebKit) */
+  .notes-list::-webkit-scrollbar-track,
+  .note-editor::-webkit-scrollbar-track {
+    background: var(--panel);
+  }
+  .notes-list::-webkit-scrollbar-thumb,
+  .note-editor::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-color: var(--panel);
+  }
+  .notes-list::-webkit-scrollbar-thumb:hover,
+  .note-editor::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+    border-color: var(--panel);
+  }
+
+  /* 1) Note content view scrollbars */
+  .note-content-view::-webkit-scrollbar-track {
+    background: #0f141d;
+  }
+  .note-content-view::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 8px;
+    border: 2px solid #0f141d;
+  }
+  .note-content-view::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+    border-color: #0f141d;
+  }
+
+  /* 2) Tabs (idle / hover / active) */
+  .tab {
+    background: #141923;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .tab:hover {
+    background: #151c2a;
+  }
+  .tab.active {
+    background: #1a2130;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* 3) Pin button (active state) */
+  .btn.pin.active {
+    border-color: var(--accent);
+    background: #1a2130;
+    color: var(--text);
+  }
+
+  /* 4) Tag chip hover */
+  .tag-chip:hover {
+    background: #151c2a;
+  }
+  .note-title {
+    color: var(--text);
+  }
+  /* Fix ghost buttons (e.g., "Edit") */
+  .btn.ghost {
+    background: #141923;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn.ghost:hover {
+    background: #151c2a;
+  }
+
+  /* Fix selected note row color */
+  .note-row.selected {
+    background: #1a2130;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(244, 200, 74, 0.25);
+  }
+}
+
+/* ===== Manual theme override via [data-theme] ===== */
+:root[data-theme='light'] {
+  --bg: #fffdf6;
+  --panel: #f6f3e7;
+  --border: #e8e2c8;
+  --text: #2b2b2b;
+  --muted: #6b6b6b;
+  --accent: #f4c84a;
+  --accent-hover: #eab308;
+  --note-bg: #fffbea;
+  --note-border: #f3e8a1;
+}
+
+:root[data-theme='dark'] {
+  --bg: #101217;
+  --panel: #141923;
+  --border: #2a2f3a;
+  --text: #e6e6e6;
+  --muted: #a1a1aa;
+  --accent: #f4c84a;
+  --accent-hover: #eab308;
+  --note-bg: #181d28;
+  --note-border: #2b3140;
+}
+
+/* Component-level dark styling when forced (match media-query section) */
+:root[data-theme='dark'] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .notes-list {
+  background: var(--panel);
+  border-right-color: var(--border);
+}
+:root[data-theme='dark'] .note-row,
+:root[data-theme='dark'] .editor-toolbar,
+:root[data-theme='dark'] .viewer-header,
+:root[data-theme='dark'] .empty-card,
+:root[data-theme='dark'] .tag-editor,
+:root[data-theme='dark'] .viewer-tags-row,
+:root[data-theme='dark'] .toast,
+:root[data-theme='dark'] .modal-content,
+:root[data-theme='dark'] .note-editor {
+  background: #131823;
+  border-color: var(--border);
+}
+
+:root[data-theme='dark'] .search-input,
+:root[data-theme='dark'] .tag-input,
+:root[data-theme='dark'] .modal-content .password-input,
+:root[data-theme='dark'] .modal-content input[type='password'],
+:root[data-theme='dark'] .modal-content input[type='text'] {
+  background: #0f141d;
+  color: var(--text);
+  border-color: var(--border);
+}
+:root[data-theme='dark'] .search-input::placeholder,
+:root[data-theme='dark'] .tag-input::placeholder {
+  color: var(--muted);
+}
+
+:root[data-theme='dark'] .note-content-view {
+  background: #0f141d;
+  border-color: var(--border);
+}
+:root[data-theme='dark'] textarea {
+  background: var(--note-bg);
+  border-color: var(--note-border);
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .tag-chip {
+  background: #0f141d;
+  border-color: var(--border);
+  color: var(--muted);
+}
+:root[data-theme='dark'] .tag-chip.on {
+  background: #1a2130;
+  border-color: var(--accent);
+  color: #e8d088;
+}
+
+:root[data-theme='dark'] .btn {
+  background: #141923;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='dark'] .btn:hover {
+  background: #151c2a;
+}
+:root[data-theme='dark'] .btn.primary {
+  color: #1a1a1a;
+}
+:root[data-theme='dark'] .btn.danger {
+  background: #27181b;
+  border-color: #57343a;
+  color: #ffb4b4;
+}
+:root[data-theme='dark'] .btn.danger:hover {
+  background: #2f1c20;
+}
+/* keep ghost fix + selected row fix */
+:root[data-theme='dark'] .btn.ghost {
+  background: #141923;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='dark'] .btn.ghost:hover {
+  background: #151c2a;
+}
+:root[data-theme='dark'] .note-row.selected {
+  background: #1a2130;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(244, 200, 74, 0.25);
+}
+
+:root[data-theme='dark'] .status-chip {
+  background: #141923;
+  border-color: var(--border);
+  color: var(--muted);
+}
+:root[data-theme='dark'] .status-chip.locked {
+  background: #2a230f;
+  border-color: #4a3a12;
+  color: #e7ca74;
+}
+:root[data-theme='dark'] .status-chip.unlocked {
+  background: #142515;
+  border-color: #254a27;
+  color: #b9e7b6;
+}
+
+:root[data-theme='dark'] .note-row:hover {
+  background: #171e2b;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme='dark'] .app-header {
+  background: rgba(16, 18, 23, 0.85);
+  border-bottom-color: var(--border);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme='dark'] .tag-chip:hover {
+  background: #151c2a;
+}
+:root[data-theme='dark'] .tab {
+  background: #141923;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='dark'] .tab:hover {
+  background: #151c2a;
+}
+:root[data-theme='dark'] .tab.active {
+  background: #1a2130;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+:root[data-theme='dark'] .btn.pin.active {
+  border-color: var(--accent);
+  background: #1a2130;
+  color: var(--text);
+}
+
+/* Forced dark scrollbars */
+:root[data-theme='dark'] .notes-list::-webkit-scrollbar-track,
+:root[data-theme='dark'] .note-editor::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+:root[data-theme='dark'] .notes-list::-webkit-scrollbar-thumb,
+:root[data-theme='dark'] .note-editor::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-color: var(--panel);
+}
+:root[data-theme='dark'] .notes-list::-webkit-scrollbar-thumb:hover,
+:root[data-theme='dark'] .note-editor::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border-color: var(--panel);
+}
+:root[data-theme='dark'] .note-content-view::-webkit-scrollbar-track {
+  background: #0f141d;
+}
+:root[data-theme='dark'] .note-content-view::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid #0f141d;
+}
+:root[data-theme='dark'] .note-content-view::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border-color: #0f141d;
+}
+
+/* Theme toggle button spacing */
+.app-header .theme-switch {
+  margin-left: 8px;
+}
+.app-header .header-spacer {
+  flex: 1;
+}
+
+/* icon-only toggle size */
+.theme-toggle {
+  width: 36px;
+  padding: 6px 0;
+  margin-right: 20px;
+  text-align: center;
+}
+
+/* ==== Manual theme overrides (append at very end) ==== */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Force LIGHT UI when user picks light (wins over @media dark) */
+:root[data-theme='light'] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+:root[data-theme='light'] .notes-list,
+:root[data-theme='light'] .note-editor,
+:root[data-theme='light'] .editor-toolbar,
+:root[data-theme='light'] .viewer-header,
+:root[data-theme='light'] .empty-card,
+:root[data-theme='light'] .tag-editor,
+:root[data-theme='light'] .viewer-tags-row,
+:root[data-theme='light'] .toast,
+:root[data-theme='light'] .modal-content,
+:root[data-theme='light'] .note-row,
+:root[data-theme='light'] .note-content-view {
+  background: #fff;
+  border-color: var(--border);
+}
+
+:root[data-theme='light'] textarea {
+  background: var(--note-bg);
+  border-color: var(--note-border);
+  color: var(--text);
+}
+
+:root[data-theme='light'] .app-header {
+  background: rgba(255, 253, 246, 0.85);
+  border-bottom-color: var(--border);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Keep accent buttons yellow in BOTH manual modes */
+:root[data-theme='dark'] .btn.primary,
+:root[data-theme='dark'] .modal-content .actions .btn.primary,
+:root[data-theme='dark'] .new-note-btn {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #1a1a1a !important;
+}
+:root[data-theme='dark'] .btn.primary:hover,
+:root[data-theme='dark'] .modal-content .actions .btn.primary:hover,
+:root[data-theme='dark'] .new-note-btn:hover {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+
+:root[data-theme='light'] .btn.primary,
+:root[data-theme='light'] .modal-content .actions .btn.primary,
+:root[data-theme='light'] .new-note-btn {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #1f1f1f !important;
+}
+:root[data-theme='light'] .btn.primary:hover,
+:root[data-theme='light'] .modal-content .actions .btn.primary:hover,
+:root[data-theme='light'] .new-note-btn:hover {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+
+/* Light-selected states when forcing light */
+:root[data-theme='light'] .note-row.selected {
+  background: #fffdf0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(244, 200, 74, 0.25);
+}
+:root[data-theme='light'] .tab {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='light'] .tab:hover {
+  background: #fffef5;
+}
+:root[data-theme='light'] .tab.active {
+  background: #fffdf0;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+:root[data-theme='light'] .tag-chip {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--muted);
+}
+:root[data-theme='light'] .tag-chip.on {
+  background: #fffdf0;
+  border-color: var(--accent);
+  color: #7a5d00;
+}
+
+/* Light scrollbars to override dark media rules */
+:root[data-theme='light'] .notes-list::-webkit-scrollbar-track,
+:root[data-theme='light'] .note-editor::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+:root[data-theme='light'] .notes-list::-webkit-scrollbar-thumb,
+:root[data-theme='light'] .note-editor::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-color: var(--panel);
+}
+:root[data-theme='light'] .note-content-view::-webkit-scrollbar-track {
+  background: #fff;
+}
+:root[data-theme='light'] .note-content-view::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid #fff;
+}
+
+/* ///// */
+
+/* --- Manual LIGHT fixes for inputs + buttons + toggle (append at end) --- */
+:root[data-theme='light'] .search-input,
+:root[data-theme='light'] .tag-input,
+:root[data-theme='light'] .modal-content .password-input,
+:root[data-theme='light'] .modal-content input[type='password'],
+:root[data-theme='light'] .modal-content input[type='text'] {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+}
+:root[data-theme='light'] .search-input::placeholder,
+:root[data-theme='light'] .tag-input::placeholder {
+  color: var(--muted);
+}
+
+/* Pin / Edit (ghost) / Delete (danger) */
+:root[data-theme='light'] .btn.pin {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='light'] .btn.pin:hover {
+  background: #fffef5;
+  border-color: var(--accent);
+}
+:root[data-theme='light'] .btn.pin.active {
+  background: #fffdf0;
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+:root[data-theme='light'] .btn.ghost {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='light'] .btn.ghost:hover {
+  background: #fffef5;
+}
+
+:root[data-theme='light'] .btn.danger {
+  background: #fff8f8;
+  border-color: #ffd4d4;
+  color: #b42318;
+}
+:root[data-theme='light'] .btn.danger:hover {
+  background: #ffecec;
+}
+
+/* Lock toggle track (so it doesn't keep the dark tint) */
+:root[data-theme='light'] .lock-toggle .toggle-track {
+  background: var(--border);
+  border-color: var(--border);
+}
+:root[data-theme='light'] .lock-toggle .toggle-input:checked + .toggle-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Theme icon button (if you style it as a button) */
+:root[data-theme='light'] .theme-toggle {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='light'] .theme-toggle:hover {
+  background: #fffef5;
+}
+
+:root[data-theme='light'] .btn {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='light'] .btn:hover {
+  background: #fffef5;
+}
+
+.search-input:focus-visible,
+.tag-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 200, 74, 0.25);
+}
+
+.brand img {
+  color: var(--text);
 }

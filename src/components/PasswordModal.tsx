@@ -1,4 +1,3 @@
-// components/PasswordModal.tsx
 import React, { useEffect, useRef, useId, useCallback, useState } from 'react'
 import '../styles.css'
 
@@ -9,6 +8,26 @@ interface PasswordModalProps {
   action: 'lock' | 'unlock'
   title?: string
 }
+
+const scorePassword = (pwd: string) => {
+  if (!pwd) return 0
+  let score = 0
+  const len = pwd.length
+  const classes =
+    (/[a-z]/.test(pwd) ? 1 : 0) +
+    (/[A-Z]/.test(pwd) ? 1 : 0) +
+    (/[0-9]/.test(pwd) ? 1 : 0) +
+    (/[^A-Za-z0-9]/.test(pwd) ? 1 : 0)
+
+  if (len >= 8) score++
+  if (len >= 12) score++
+  if (classes >= 3) score++
+  if (classes === 4) score++
+  return Math.min(4, score)
+}
+
+const labelForScore = (s: number) =>
+  ['Too short', 'Weak', 'Okay', 'Strong', 'Very strong'][s]
 
 const PasswordModal: React.FC<PasswordModalProps> = ({
   isOpen,
@@ -67,6 +86,8 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
 
   const submitLabel = action === 'unlock' ? 'Unlock' : 'Set password'
 
+  const score = action === 'lock' ? scorePassword(password) : 0
+
   return (
     <div
       className="modal"
@@ -100,20 +121,12 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
             placeholder="Enter password"
             onKeyDown={handleKeyDown}
             aria-label="Password"
+            aria-describedby={
+              action === 'lock' ? 'pw-strength-label' : undefined
+            }
           />
-          <div
-            // style={{
-            //   display: 'flex',
-            //   alignItems: 'center',
-            //   gap: 8,
-            //   marginTop: 8,
-            // }}
-            className="pw-visibility"
-          >
-            <label
-              // style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              className="pw-toggle"
-            >
+          <div className="pw-visibility">
+            <label className="pw-toggle">
               <input
                 type="checkbox"
                 checked={showPw}
@@ -122,6 +135,16 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               Show password
             </label>
           </div>
+
+          {action === 'lock' && (
+            <div className="pw-strength" aria-live="polite">
+              <div className={`pw-bar s${score}`} aria-hidden="true" />
+              <div id="pw-strength-label" className="pw-strength-label">
+                {labelForScore(score)}
+              </div>
+            </div>
+          )}
+
           <div className="actions">
             <button type="button" className="btn" onClick={onClose}>
               Cancel
@@ -131,7 +154,6 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
               className="btn primary"
               disabled={!password.trim()}
               aria-disabled={!password.trim()}
-              // onClick={handleSubmit}
               title={submitLabel}
             >
               {submitLabel}

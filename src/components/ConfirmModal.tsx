@@ -34,6 +34,15 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   }, [isOpen, onClose])
 
   useEffect(() => {
+    if (!isOpen) return
+    const { overflow } = document.body.style
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = overflow
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (isOpen) requestAnimationFrame(() => confirmRef.current?.focus())
   }, [isOpen])
 

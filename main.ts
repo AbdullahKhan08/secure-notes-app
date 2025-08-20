@@ -1,20 +1,195 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import fs from 'fs-extra'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import path from 'path'
-import { config } from 'dotenv'
 import type { Note } from './types'
-config()
+import { autoUpdater } from 'electron-updater'
+function loadEnvironment() {
+  const isPackaged = app.isPackaged
+  const envPathProd = path.join(process.resourcesPath, '.env')
+  const envPathDevA = path.join(__dirname, '..', '.env')
+  const envPathDevB = path.join(process.cwd(), '.env')
+
+  const envPath = isPackaged
+    ? envPathProd
+    : fs.existsSync(envPathDevA)
+    ? envPathDevA
+    : envPathDevB
+
+  try {
+    require('dotenv').config({ path: envPath })
+    console.log(`Loaded .env from: ${envPath}`)
+  } catch (e) {
+    console.warn('No .env loaded', e)
+  }
+}
+
+loadEnvironment()
 
 const algorithm = 'aes-256-cbc'
 const secretKey = Buffer.from(process.env.SECRET_KEY || '', 'base64')
-if (secretKey.length !== 32) {
-  console.error(
-    'SECRET_KEY must be a 32-byte base64 string (AES-256). ' +
-      `Got ${secretKey.length} bytes.`
-  )
-  app.quit()
+
+autoUpdater.on('update-available', () => {
+  // Optional: give the user a heads-up
+  if (win) {
+    dialog.showMessageBox(win, {
+      type: 'info',
+      message: 'An update is available. It will download in the background.',
+      buttons: ['OK'],
+    })
+  }
+})
+
+autoUpdater.on('update-downloaded', () => {
+  // Ask to restart now
+  if (!win) return
+  dialog
+    .showMessageBox(win, {
+      type: 'question',
+      buttons: ['Install & Restart', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      message: 'Update downloaded',
+      detail: 'Install the update and restart the app now?',
+    })
+    .then((res) => {
+      if (res.response === 0) autoUpdater.quitAndInstall()
+    })
+})
+
+let win: BrowserWindow | null = null
+let splash: BrowserWindow | null = null
+
+let splashShownAt = 0
+let revealed = false
+const SPLASH_MIN_MS = 2500
+
+function getSplashHtmlPath() {
+  if (app.isPackaged) {
+    return path.join(__dirname, 'splash.html')
+  }
+  return path.join(process.cwd(), 'public', 'splash.html')
+}
+
+function createSplash(): Promise<void> {
+  return new Promise((resolve) => {
+    revealed = false
+
+    splash = new BrowserWindow({
+      width: 600,
+      height: 400,
+      minWidth: 600,
+      minHeight: 400,
+      backgroundColor: '#fffdf6',
+      frame: false,
+      center: true,
+      alwaysOnTop: true,
+      resizable: false,
+      show: false,
+      skipTaskbar: true,
+      movable: false,
+      focusable: false,
+      webPreferences: {
+        devTools: false,
+      },
+    })
+
+    const splashPath = getSplashHtmlPath()
+    splash.once('ready-to-show', () => {
+      splashShownAt = Date.now()
+      splash!.show()
+      resolve()
+    })
+
+    splash.loadFile(splashPath).catch((err) => {
+      console.error('⚠️ Failed to load splash.html:', err)
+      resolve()
+    })
+  })
+}
+
+function safeCloseSplash(minMs = SPLASH_MIN_MS) {
+  const elapsed = Date.now() - splashShownAt
+  const delay = Math.max(0, minMs - elapsed)
+  setTimeout(() => {
+    if (splash && !splash.isDestroyed()) splash.close()
+    splash = null
+  }, delay)
+}
+
+function createWindow() {
+  if (secretKey.length !== 32) {
+    console.error(
+      'SECRET_KEY must be a 32-byte base64 string (AES-256). ' +
+        `Got ${secretKey.length} bytes.`
+    )
+    app.quit()
+  }
+
+  win = new BrowserWindow({
+    width: 1600,
+    height: 1000,
+    minWidth: 1280,
+    minHeight: 720,
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    fullscreenable: true,
+    fullscreen: false,
+    title: 'Secure Notes App',
+    show: false,
+    icon: path.join(__dirname, 'build', 'icons', 'secure-notes-icon-1024.png'),
+    backgroundColor: '#fffdf6',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: false,
+      spellcheck: false,
+      zoomFactor: 1.0,
+    },
+  })
+  app.setAppUserModelId?.('com.abdullahkhan.securenotes')
+
+  win.setBounds({ x: 0, y: 0, width: 1600, height: 1000 })
+  if (process.env.NODE_ENV === 'development') {
+    win.loadURL('http://localhost:3000').catch((err) => {
+      console.error('Error loading React app:', err)
+      safeCloseSplash()
+      app.quit()
+    })
+  } else {
+    const buildPath = path.join(__dirname, '..', 'renderer', 'index.html')
+    win.loadFile(buildPath).catch((err) => {
+      console.error('Error loading production build:', err)
+      safeCloseSplash()
+      app.quit()
+    })
+  }
+
+  const revealOnce = () => {
+    if (revealed) return
+    revealed = true
+    const elapsed = Date.now() - splashShownAt
+    const delay = Math.max(0, SPLASH_MIN_MS - elapsed)
+
+    setTimeout(() => {
+      if (splash && !splash.isDestroyed()) splash.close()
+      splash = null
+      win?.show()
+      win?.focus()
+    }, delay)
+  }
+
+  win.webContents.once('did-finish-load', revealOnce)
+  win.webContents.once('dom-ready', () => {
+    if (!win?.isVisible()) revealOnce()
+  })
+
+  win.on('closed', () => {
+    win = null
+  })
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -29,62 +204,26 @@ if (!app.requestSingleInstanceLock()) {
   })
 }
 
-let win: BrowserWindow | null = null
+app.whenReady().then(async () => {
+  await createSplash()
+  createWindow()
+  setTimeout(() => {
+    autoUpdater.checkForUpdatesAndNotify()
+  }, 1500)
+})
 
-function createWindow() {
-  win = new BrowserWindow({
-    width: 1600,
-    height: 1000,
-    minWidth: 1280,
-    minHeight: 720,
-    resizable: true,
-    maximizable: true,
-    minimizable: true,
-    fullscreenable: true,
-    fullscreen: false,
-    title: 'Secure Notes App',
-    show: false,
-    backgroundColor: '#fffdf6',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      // devTools: false,
-      spellcheck: false,
-      zoomFactor: 1.0,
-    },
-  })
-
-  win.setBounds({ x: 0, y: 0, width: 1600, height: 1000 })
-  if (process.env.NODE_ENV === 'development') {
-    win.loadURL('http://localhost:3000').catch((err) => {
-      console.error('Error loading React app:', err)
-      app.quit()
-    })
-    win.once('ready-to-show', () => win!.show())
-  } else {
-    const buildPath = path.join(__dirname, 'frontend', 'build', 'index.html')
-    win.loadFile(buildPath).catch((err) => {
-      console.error('Error loading production build:', err)
-      app.quit()
-    })
-    win.once('ready-to-show', () => win!.show())
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createSplash()
+    createWindow()
   }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-
-  win.on('closed', () => {
-    win = null
-  })
-}
-
-app.whenReady().then(createWindow)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+
+/////
 
 const getNotesFilePath = () => {
   const notesFilePath = path.join(app.getPath('userData'), 'notes.json')
@@ -105,16 +244,12 @@ const getNotesFilePath = () => {
 
 const makePreview = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 10)
 
-// Helpers to keep sensitive fields out of the renderer
 function stripSecrets(n: Note) {
-  // remove crypto material before sending to the UI
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { iv, encryptedData, passwordHash, ...safe } = n as any
   return safe as Note
 }
 
 function maskIfLocked(n: Note) {
-  // if locked, hide content; otherwise pass it through
   const safe = stripSecrets(n)
   return { ...safe, content: n.locked ? 'Locked Note' : n.content } as Note
 }
@@ -123,7 +258,7 @@ const cleanTags = (arr: string[] | undefined) =>
   Array.from(
     new Set(
       (arr ?? [])
-        .flatMap((t) => t.split(',')) // let users paste "a, b, c"
+        .flatMap((t) => t.split(','))
         .map((t) => t.trim())
         .filter(Boolean)
     )
@@ -156,18 +291,7 @@ ipcMain.handle(
       const idx = notes.findIndex((n) => n.noteId === id)
       let note: Note
 
-      // const note: Note = {
-      //   noteId: id,
-      //   content: shouldLock ? 'Locked Note' : content,
-      //   preview,
-      //   locked: shouldLock,
-      //   createdAt: now,
-      //   updatedAt: now,
-      //   pinned: false,
-      // }
-
       if (idx >= 0) {
-        // (rare) overwrite via save-note: preserve createdAt/pinned
         const prev = notes[idx]
         note = {
           ...prev,
@@ -202,7 +326,6 @@ ipcMain.handle(
         note.encryptedData = encrypted
         note.passwordHash = hashedPassword
       } else {
-        // IMPORTANT: ensure no stale crypto fields remain when unlocking via save-note
         delete note.iv
         delete note.encryptedData
         delete note.passwordHash
@@ -232,8 +355,6 @@ ipcMain.handle('get-notes', async (): Promise<Note[]> => {
       console.warn('No notes found in the file.')
       return []
     }
-
-    // return notes.map(maskIfLocked)
     return notes
       .filter((n) => !n.deletedAt)
       .map((n) => maskIfLocked({ ...n, tags: n.tags ?? [] }))
@@ -322,9 +443,6 @@ ipcMain.handle(
         let encrypted = cipher.update(content, 'utf8', 'hex')
         encrypted += cipher.final('hex')
 
-        // const salt = await bcrypt.genSalt(10)
-        // const hashedPassword = await bcrypt.hash(password!, salt)
-        // passwordHashToUse = await bcrypt.hash(password!, salt)
         note.locked = true
         note.content = 'Locked Note'
         note.iv = iv.toString('hex')
@@ -349,28 +467,6 @@ ipcMain.handle(
   }
 )
 
-// old
-// ipcMain.handle(
-//   'delete-note',
-//   async (
-//     event,
-//     noteId: number
-//   ): Promise<{ success: true } | { success: false; error: string }> => {
-//     try {
-//       const file = getNotesFilePath()
-//       let notes: Note[] = await fs.readJson(file)
-
-//       notes = notes.filter((n) => n.noteId !== noteId)
-//       await fs.writeJson(file, notes)
-//       return { success: true }
-//     } catch (e: any) {
-//       console.error(e)
-//       return { success: false, error: e.message }
-//     }
-//   }
-// )
-
-// new
 ipcMain.handle(
   'delete-note',
   async (

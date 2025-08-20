@@ -1,31 +1,82 @@
 {
-  "name": "secure-notes-app-2",
-  "version": "0.1.0",
+  "name": "secure-notes-app",
+  "version": "1.0.0",
+  "homepage": ".",
+  "description": "Secure Notes",
   "main": "dist/main.js",
   "private": true,
+  "build": {
+    "extends": null,
+    "compression": "maximum",
+    "appId": "com.abdullahkhan.securenotes",
+    "productName": "Secure Notes",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "icon": "build/icons/SecureNotes.icns",
+      "darkModeSupport": true,
+      "target": [
+        "dmg"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/*.test.*",
+      "!src/**",
+      "!public/**",
+      "!release/**",
+      "!node_modules/.cache/**"
+    ],
+    "asar": true,
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AbdullahKhan08",
+        "repo": "secure-notes-app"
+      }
+    ]
+  },
+  "author": {
+    "name": "Abdullah Khan",
+    "email": "abdullah.khan171202@gmail.com"
+  },
+  "scripts": {
+    "dev": "concurrently -k -r -n REACT,TS,ELECTRON \"cross-env BROWSER=none react-scripts start\" \"npm:tsc:main\" \"wait-on tcp:3000 && cross-env NODE_ENV=development electron .\"",
+    "tsc:main": "tsc -p tsconfig.main.json -w",
+    "build:react": "cross-env BUILD_PATH=renderer react-scripts build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:copy": "mkdir -p dist/icons && cp public/splash.html dist/splash.html && cp public/icons/* dist/icons/",
+    "build:app": "npm run build:react && npm run build:main && npm run build:copy",
+    "dist:mac": "npm run build:app && electron-builder --mac",
+    "publish:mac": "npm run build:app && electron-builder --mac --publish always",
+    "clean": "rimraf dist renderer release"
+  },
   "dependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.6.4",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/fs-extra": "^11.0.4",
     "bcryptjs": "^3.0.2",
-    "crypto": "^1.0.1",
     "dotenv": "^17.2.1",
+    "electron-updater": "^6.6.2",
     "fs-extra": "^11.3.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "start-electron": "electron .",
-    "tsc": "tsc --watch",
-    "dev": "npm run start & npm run electron"
   },
   "eslintConfig": {
     "extends": [
@@ -46,9 +97,19 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
-    "electron": "^37.2.5"
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^37.2.5",
+    "electron-builder": "^26.0.12",
+    "rimraf": "^6.0.1",
+    "wait-on": "^7.2.0"
   }
 }

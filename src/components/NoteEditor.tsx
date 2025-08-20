@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Note } from '../../types'
 import '../styles.css'
 import PasswordModal from './PasswordModal'
@@ -17,7 +17,8 @@ interface NoteEditorProps {
     shouldLock: boolean,
     tags: string[]
   ) => void
-  notify: (text: string, kind?: 'info' | 'success' | 'error') => void // ← NEW
+  notify: (text: string, kind?: 'info' | 'success' | 'error') => void
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 const NoteEditor: React.FC<NoteEditorProps> = ({
@@ -29,6 +30,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   unlockedThisSession,
   onSave,
   notify,
+  onDirtyChange,
 }) => {
   const [content, setContent] = useState<string>('')
   const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false)
@@ -38,6 +40,26 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+
+  // --- Dirty tracking baselines ---
+  const baseContentRef = useRef<string>('')
+  const baseTagsRef = useRef<string[]>([])
+  const baseLockRef = useRef<boolean>(lockOnSave)
+
+  // tracks which note we've initialized the editor for
+  const initForNoteRef = useRef<number | 'new' | null>(null)
+
+  // helper
+  const arraysEqual = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((v, i) => v === b[i])
+
+  const recomputeDirty = useCallback(() => {
+    const dirty =
+      content !== baseContentRef.current ||
+      !arraysEqual(tags, baseTagsRef.current) ||
+      lockOnSave !== baseLockRef.current
+    onDirtyChange?.(dirty)
+  }, [content, tags, lockOnSave, onDirtyChange])
 
   const addTag = (raw: string) => {
     const t = raw.trim().replace(/^#/, '')
@@ -72,15 +94,33 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   }
 
   useEffect(() => {
-    const existing = !!note?.noteId
-    if (isEditing) {
-      setContent(existing ? note?.content ?? '' : '')
-    } else {
-      setContent(note?.content ?? '')
+    if (!isEditing) {
+      initForNoteRef.current = null // allow re-init next time we enter edit
+      return
+    }
+
+    // New note being created
+    if (note?.noteId == null) {
+      if (initForNoteRef.current !== 'new') {
+        setContent('') // start blank for new note
+        initForNoteRef.current = 'new'
+      }
+      return
+    }
+
+    // Existing note: only initialize once per noteId while editing
+    if (initForNoteRef.current !== note.noteId) {
+      setContent(note.content ?? '')
+      initForNoteRef.current = note.noteId
     }
   }, [isEditing, note?.noteId, note?.content])
 
-  // 3) Reset any staged password state when switching note/mode
+  // When NOT editing, mirror live content so viewer reacts to lock/unlock/autolock
+  useEffect(() => {
+    if (isEditing) return
+    setContent(note?.content ?? '')
+  }, [isEditing, note?.content])
+
   useEffect(() => {
     setIsChangingPassword(false)
     setPendingLockPassword('')
@@ -96,8 +136,23 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     }
   }, [lockOnSave])
 
-  // const openPasswordModal = () => setPasswordModalOpen(true)
-  // const closePasswordModal = () => setPasswordModalOpen(false)
+  // establish dirty baselines whenever we enter editing or switch notes
+  useEffect(() => {
+    if (isEditing) {
+      baseContentRef.current = note?.content ?? ''
+      baseTagsRef.current = (note?.tags ?? []).slice()
+      baseLockRef.current = lockOnSave
+      onDirtyChange?.(false)
+    } else {
+      onDirtyChange?.(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, note?.noteId])
+
+  // recompute dirty when relevant fields change
+  useEffect(() => {
+    if (isEditing) recomputeDirty()
+  }, [isEditing, content, tags, lockOnSave, recomputeDirty])
 
   const fullDate = (ms?: number) =>
     ms
@@ -137,7 +192,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleSaveClick = useCallback(() => {
     const trimmed = content.trim()
     if (!trimmed) {
-      // alert('Please enter note content')
       notify('Please enter note content', 'error')
       return
     }
@@ -164,6 +218,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       }
     }
     onSave(note?.noteId ?? null, trimmed, passwordToSend, lockOnSave, tags)
+
+    // Optimistically reset dirty baseline to current state
+    baseContentRef.current = trimmed
+    baseTagsRef.current = tags.slice()
+    baseLockRef.current = lockOnSave
+    onDirtyChange?.(false)
+
     if (!note?.noteId) setContent('')
     setIsChangingPassword(false)
     setPendingLockPassword('')
@@ -178,13 +239,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     onSave,
     notify,
     tags,
+    onDirtyChange,
   ])
 
   const handlePasswordSubmit = useCallback(
     (password: string) => {
       const trimmedPw = password.trim()
       if (!trimmedPw) {
-        // alert('Please enter a password')
         notify('Please enter a password', 'error')
         return
       }
@@ -194,13 +255,26 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
       if (completeSaveAfterPassword) {
         onSave(note?.noteId ?? null, content.trim(), trimmedPw, true, tags)
+        // reset dirty baseline to saved state
+        baseContentRef.current = content.trim()
+        baseTagsRef.current = tags.slice()
+        baseLockRef.current = true
+        onDirtyChange?.(false)
         if (!note?.noteId) setContent('')
         setIsChangingPassword(false)
         setPendingLockPassword('')
         setCompleteSaveAfterPassword(false)
       }
     },
-    [completeSaveAfterPassword, content, note?.noteId, onSave, notify, tags]
+    [
+      completeSaveAfterPassword,
+      content,
+      note?.noteId,
+      onSave,
+      notify,
+      tags,
+      onDirtyChange,
+    ]
   )
 
   // ⌘/Ctrl + S to save
@@ -227,6 +301,11 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       ? 'Save with new password'
       : 'Save and encrypt this note'
     : 'Save without changing lock status'
+
+  const saveDisabled = useMemo(
+    () => !content.trim() || (!!note?.locked && !unlockedThisSession),
+    [content, note?.locked, unlockedThisSession]
+  )
 
   return (
     <div className="note-editor-container">
@@ -278,11 +357,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
             <button
               className="btn primary"
               onClick={handleSaveClick}
-              disabled={!content.trim()}
-              aria-disabled={!content.trim()}
+              disabled={saveDisabled}
+              aria-disabled={saveDisabled}
               title={saveTitle}
             >
-              {/* {lockOnSave ? 'Lock & Save' : 'Save Note'} */}
               {saveLabel}
             </button>
           </div>

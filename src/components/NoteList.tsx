@@ -12,7 +12,7 @@ interface NotesListProps {
   onRestoreNote?: (noteId: number) => void
   onDeleteForever?: (noteId: number) => void
   mode?: 'active' | 'trash'
-  emptyMessage?: string // NEW
+  emptyMessage?: string
 }
 
 function NotesList({
@@ -33,7 +33,7 @@ function NotesList({
   function relTime(ms?: number) {
     if (!ms) return ''
     const now = Date.now()
-    const diff = Math.max(0, Math.floor((now - ms) / 1000)) // seconds
+    const diff = Math.max(0, Math.floor((now - ms) / 1000))
     if (diff < 10) return 'Just now'
     if (diff < 60) return `${diff}s ago`
     const m = Math.floor(diff / 60)
@@ -98,8 +98,13 @@ function NotesList({
               }}
               onKeyDown={(e) => {
                 if (mode === 'trash') return
-                const k = e.key.toLowerCase()
-                if (k === 'enter' || k === ' ') {
+                const k = e.key
+                const activate =
+                  k === 'Enter' ||
+                  k === ' ' ||
+                  k === 'Spacebar' || // legacy
+                  e.code === 'Space'
+                if (activate) {
                   e.preventDefault()
                   onSelectNote(note)
                 }
@@ -124,11 +129,6 @@ function NotesList({
                     ))}
                   </div>
                 )}
-                {/* <div className="note-meta">
-                  {note.pinned ? '📌 Pinned · ' : ''}
-              
-                  {relTime(updatedAt)}
-                </div> */}
                 <div className="note-meta">
                   {mode === 'trash' ? (
                     <>Deleted {relTime(deletedAt ?? updatedAt)}</>
@@ -185,6 +185,7 @@ function NotesList({
                   <>
                     <button
                       className="btn"
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         onRestoreNote?.(note.noteId)
@@ -196,6 +197,7 @@ function NotesList({
                     </button>
                     <button
                       className="btn danger"
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         onDeleteForever?.(note.noteId)

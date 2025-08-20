@@ -1,34 +1,16 @@
 {
   "compilerOptions": {
-    "jsx": "react-jsx", // This tells TypeScript to handle JSX properly
-    "target": "ES6", // Compiles TypeScript to ES6 JavaScript
+    "jsx": "react-jsx",
+    "target": "ES2020",
+    "module": "esnext",
     "moduleResolution": "node",
-    "module": "commonjs", // Use CommonJS modules for Node.js
     "resolveJsonModule": true,
-    "strict": true, // Enable strict type checking
-    "esModuleInterop": true, // Allow compatibility with CommonJS modules
-    "skipLibCheck": true, // Skip type checking for declaration files
-    "forceConsistentCasingInFileNames": true, // Ensure consistent casing in file names
-    "outDir": "./dist", // Output directory for compiled files
-    "baseUrl": ".", // Base directory for resolving non-relative paths
-    // "typeRoots": ["node_modules/@types"],
-    // "types": ["node", "electron"],
-    "paths": {
-      "*": ["node_modules/*"] // Resolve imports from node_modules
-    }
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "."
   },
-  // "include": [
-  //   "src/**/*", // Include all files in src folder
-  //   "main.ts" // Include the main Electron entry file
-  // ],
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "main.ts", // Include your main.ts file here,
-    "preload.ts",
-    "types.ts"
-  ],
-  "exclude": [
-    "node_modules" // Exclude node_modules from compilation
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
 }

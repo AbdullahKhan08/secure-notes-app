@@ -1,6 +1,6 @@
 {
   "name": "secure-notes-app",
-  "version": "2.0.2",
+  "version": "2.0.1",
   "homepage": ".",
   "description": "Secure Notes",
   "main": "dist/main.js",
@@ -20,7 +20,8 @@
       "icon": "build/icons/SecureNotes.icns",
       "darkModeSupport": true,
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
